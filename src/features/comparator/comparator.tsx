@@ -4,12 +4,54 @@ import { useUrlState, type CustomScreen as CustomScreenType } from "@/features/u
 import { Comparator2D } from "./components/comparator-2d";
 import { Comparator3D } from "./components/comparator-3d";
 import { CustomScreen } from "./components/custom-screen";
-import { Plus, X, PanelLeft, PanelRight, PanelBottom, Maximize2, Minimize2 } from "lucide-react";
+import {
+  Plus,
+  X,
+  PanelLeft,
+  PanelRight,
+  PanelBottom,
+  Maximize2,
+  Minimize2,
+  SlidersHorizontal,
+} from "lucide-react";
 
 export function Comparator() {
   const { data: screens = [] } = useScreens();
   const [state, setState] = useUrlState();
   const [isCustomDialogOpen, setIsCustomDialogOpen] = useState(false);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState<number | null>(null);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const wasNarrowRef = useRef<boolean | null>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    // Set initial width
+    const rect = containerRef.current.getBoundingClientRect();
+    setWidth(rect.width);
+    const isNarrow = rect.width < 600;
+    setIsMinimized(isNarrow);
+    wasNarrowRef.current = isNarrow;
+
+    const observer = new ResizeObserver((entries) => {
+      if (entries[0]) {
+        setWidth(entries[0].contentRect.width);
+      }
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (width === null) return;
+    const isNarrow = width < 600;
+    if (wasNarrowRef.current !== isNarrow) {
+      setIsMinimized(isNarrow);
+      wasNarrowRef.current = isNarrow;
+    }
+  }, [width]);
 
   const compState = state.compState || "small";
   const compPlacement = state.compPlacement || "bottom";
@@ -90,7 +132,10 @@ export function Comparator() {
     "px-2 h-6 text-[10px] font-bold uppercase tracking-[0.12em] cursor-pointer transition-all rounded-sm";
 
   return (
-    <div className="@container flex flex-col gap-0 h-full w-full overflow-hidden bg-app-surface text-text-primary pt-4 md:pt-6">
+    <div
+      ref={containerRef}
+      className="@container flex flex-col gap-0 h-full w-full overflow-hidden bg-app-surface text-text-primary pt-4 md:pt-6"
+    >
       {/* ── Section header ───────────────────────────────────────── */}
       <div className="flex flex-col @sm:flex-row @sm:items-start @sm:justify-between gap-4 pb-5 flex-shrink-0 px-4 md:px-6">
         <div>
@@ -103,6 +148,20 @@ export function Comparator() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {/* Controls Toggle (Square button) */}
+          <button
+            type="button"
+            title={isMinimized ? "Show Controls" : "Hide Controls"}
+            onClick={() => setIsMinimized(!isMinimized)}
+            className={`w-8 h-8 flex items-center justify-center border rounded-none cursor-pointer transition-all ${
+              !isMinimized
+                ? "bg-brand border-brand text-white hover:bg-brand-hover hover:border-brand-hover"
+                : "border-app-border-strong bg-transparent text-text-secondary hover:bg-text-primary/4"
+            }`}
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+          </button>
+
           {/* Desktop Only Dock Controls */}
           <div className="hidden md:flex items-center gap-2">
             {/* Placement Selectors */}
@@ -182,109 +241,113 @@ export function Comparator() {
       </div>
 
       {/* ── Command strip (Flex-wrap layout for narrow container widths) ── */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5 py-3 border-t border-b border-app-border flex-shrink-0 px-4 md:px-6">
-        {/* Layout Mode */}
-        <div className="flex items-center gap-0.5 h-8">
-          <span className="label-caps text-text-muted mr-1.5 shrink-0">Layout</span>
-          {(["horizontal", "vertical", "stacked"] as const).map((lay) => (
-            <button
-              key={lay}
-              onClick={() => setState({ layout: lay })}
-              className={`${cmdBase} ${state.layout === lay ? cmdActive : cmdInactive}`}
-            >
-              {lay === "horizontal" ? "H" : lay === "vertical" ? "V" : "S"}
-            </button>
-          ))}
-        </div>
-
-        {/* View Mode (2D / 3D Toggle) */}
-        <div className="flex items-center gap-0.5 h-8">
-          <span className="label-caps text-text-muted mr-1.5 shrink-0">View</span>
-          {(["2d", "3d"] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => setState({ view: v })}
-              className={`${cmdBase} ${state.view === v ? cmdActive : cmdInactive}`}
-            >
-              {v.toUpperCase()}
-            </button>
-          ))}
-        </div>
-
-        {/* Visual Overlays */}
-        <div className="flex items-center gap-0.5 h-8">
-          <span className="label-caps text-text-muted mr-1.5 shrink-0">Show</span>
-          {(
-            [
-              { key: "showLabels", label: "Labels" },
-              { key: "showArea", label: "Area" },
-              { key: "showMannequin", label: "Figure" },
-            ] as const
-          ).map(({ key, label }) => {
-            const isOn = state[key] as boolean;
-            return (
+      {!isMinimized && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5 py-3 border-t border-b border-app-border flex-shrink-0 px-4 md:px-6 bg-app-surface/10">
+          {/* Layout Mode */}
+          <div className="flex items-center gap-0.5 h-8">
+            <span className="label-caps text-text-muted mr-1.5 shrink-0">Layout</span>
+            {(["horizontal", "vertical", "stacked"] as const).map((lay) => (
               <button
-                key={key}
-                type="button"
-                onClick={() => setState({ [key]: !isOn } as Parameters<typeof setState>[0])}
-                className={`${cmdBase} ${isOn ? cmdActive : cmdInactive}`}
+                key={lay}
+                onClick={() => setState({ layout: lay })}
+                className={`${cmdBase} ${state.layout === lay ? cmdActive : cmdInactive}`}
               >
-                {label}
+                {lay === "horizontal" ? "H" : lay === "vertical" ? "V" : "S"}
               </button>
-            );
-          })}
-        </div>
-
-        {/* Aspect Ratio Mask */}
-        <div className="flex items-center gap-1.5 h-8">
-          <span className="label-caps text-text-muted shrink-0 mr-0.5">Mask</span>
-          <select
-            value={state.mask}
-            onChange={(e) => setState({ mask: e.target.value })}
-            className="bg-transparent text-xs font-medium text-text-secondary focus:outline-none cursor-pointer max-w-[160px]"
-          >
-            {aspectMaskOptions.map((opt) => (
-              <option
-                key={opt.value}
-                value={opt.value}
-                className="bg-app-surface text-text-primary"
-              >
-                {opt.label}
-              </option>
             ))}
-          </select>
-        </div>
+          </div>
 
-        {/* Masking Mode */}
-        <div className="flex items-center gap-0.5 h-8">
-          <span className="label-caps text-text-muted mr-1.5 shrink-0">Mode</span>
-          {(
-            [
-              { value: "darken", label: "Darken" },
-              { value: "crop", label: "Crop" },
-            ] as const
-          ).map((m) => {
-            const isSelected = (state.maskMode || "darken") === m.value;
-            const isDisabled = state.mask === "none";
-            return (
+          {/* View Mode (2D / 3D Toggle) */}
+          <div className="flex items-center gap-0.5 h-8">
+            <span className="label-caps text-text-muted mr-1.5 shrink-0">View</span>
+            {(["2d", "3d"] as const).map((v) => (
               <button
-                key={m.value}
-                disabled={isDisabled}
-                onClick={() => setState({ maskMode: m.value })}
-                className={`${cmdBase} disabled:opacity-25 disabled:cursor-not-allowed ${
-                  isSelected && !isDisabled ? cmdActive : cmdInactive
-                }`}
+                key={v}
+                type="button"
+                onClick={() => setState({ view: v })}
+                className={`${cmdBase} ${state.view === v ? cmdActive : cmdInactive}`}
               >
-                {m.label}
+                {v.toUpperCase()}
               </button>
-            );
-          })}
+            ))}
+          </div>
+
+          {/* Visual Overlays */}
+          <div className="flex items-center gap-0.5 h-8">
+            <span className="label-caps text-text-muted mr-1.5 shrink-0">Show</span>
+            {(
+              [
+                { key: "showLabels", label: "Labels" },
+                { key: "showArea", label: "Area" },
+                { key: "showMannequin", label: "Figure" },
+              ] as const
+            ).map(({ key, label }) => {
+              const isOn = state[key] as boolean;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setState({ [key]: !isOn } as Parameters<typeof setState>[0])}
+                  className={`${cmdBase} ${isOn ? cmdActive : cmdInactive}`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Aspect Ratio Mask */}
+          <div className="flex items-center gap-1.5 h-8">
+            <span className="label-caps text-text-muted shrink-0 mr-0.5">Mask</span>
+            <select
+              value={state.mask}
+              onChange={(e) => setState({ mask: e.target.value })}
+              className="bg-transparent text-xs font-medium text-text-secondary focus:outline-none cursor-pointer max-w-[160px]"
+            >
+              {aspectMaskOptions.map((opt) => (
+                <option
+                  key={opt.value}
+                  value={opt.value}
+                  className="bg-app-surface text-text-primary"
+                >
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Masking Mode */}
+          <div className="flex items-center gap-0.5 h-8">
+            <span className="label-caps text-text-muted mr-1.5 shrink-0">Mode</span>
+            {(
+              [
+                { value: "darken", label: "Darken" },
+                { value: "crop", label: "Crop" },
+              ] as const
+            ).map((m) => {
+              const isSelected = (state.maskMode || "darken") === m.value;
+              const isDisabled = state.mask === "none";
+              return (
+                <button
+                  key={m.value}
+                  disabled={isDisabled}
+                  onClick={() => setState({ maskMode: m.value })}
+                  className={`${cmdBase} disabled:opacity-25 disabled:cursor-not-allowed ${
+                    isSelected && !isDisabled ? cmdActive : cmdInactive
+                  }`}
+                >
+                  {m.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ── Selected screen chips ────────────────────────────────── */}
-      <div className="flex items-center gap-1.5 py-2.5 overflow-x-auto border-b border-app-border px-4 md:px-6">
+      <div
+        className={`flex items-center gap-1.5 py-2.5 overflow-x-auto border-b border-app-border px-4 md:px-6 ${isMinimized ? "border-t" : ""}`}
+      >
         <span className="label-caps text-text-muted mr-1 shrink-0 flex items-center gap-2">
           Comparing ({totalItemsCount}):
           {totalItemsCount > 3 && (
