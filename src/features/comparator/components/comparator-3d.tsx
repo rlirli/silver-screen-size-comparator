@@ -220,7 +220,11 @@ export function Comparator3D({
   return (
     <div className="relative w-full h-full min-h-0 bg-app-bg overflow-hidden">
       {/* 3D R3F Canvas */}
-      <Canvas shadows camera={{ position: [0, 6, 22], fov: 55 }}>
+      <Canvas
+        shadows
+        camera={{ position: [0, 6, 22], fov: 55 }}
+        gl={{ logarithmicDepthBuffer: true }}
+      >
         {/* Lights */}
         <ambientLight intensity={0.55} />
         <directionalLight
@@ -229,7 +233,13 @@ export function Comparator3D({
           castShadow
           shadow-mapSize-width={1024}
           shadow-mapSize-height={1024}
-          shadow-bias={-0.0001}
+          shadow-bias={-0.0005}
+          shadow-camera-left={-50}
+          shadow-camera-right={50}
+          shadow-camera-top={45}
+          shadow-camera-bottom={-10}
+          shadow-camera-near={0.5}
+          shadow-camera-far={100}
         />
         <directionalLight position={[-10, 10, -10]} intensity={0.25} />
 
@@ -237,7 +247,7 @@ export function Comparator3D({
         <gridHelper
           args={[
             120,
-            120,
+            24,
             resolvedTheme === "dark" ? GRID_COLOR_CENTER_DARK : GRID_COLOR_CENTER_LIGHT,
             resolvedTheme === "dark" ? GRID_COLOR_GRID_DARK : GRID_COLOR_GRID_LIGHT,
           ]}
@@ -267,7 +277,13 @@ export function Comparator3D({
               {/* Physical Screen White Canvas (Drawn slightly forward to prevent z-fighting) */}
               <mesh position={[0, 0, thickness / 2 + 0.002]} receiveShadow>
                 <planeGeometry args={[box.effectiveW - 0.1, box.effectiveH - 0.1]} />
-                <meshStandardMaterial color={SCREEN_CANVAS_COLOR} roughness={0.9} />
+                <meshStandardMaterial
+                  color={SCREEN_CANVAS_COLOR}
+                  roughness={0.9}
+                  polygonOffset
+                  polygonOffsetFactor={-1}
+                  polygonOffsetUnits={-1}
+                />
               </mesh>
 
               {/* Active Picture Crop Mask Area Overlay (cobalt blue highlight plane) */}
@@ -279,13 +295,22 @@ export function Comparator3D({
                     opacity={0.25}
                     transparent
                     roughness={0.5}
+                    polygonOffset
+                    polygonOffsetFactor={-2}
+                    polygonOffsetUnits={-2}
                   />
                   {/* Border line around active crop */}
                   <lineSegments>
                     <edgesGeometry
                       args={[new THREE.PlaneGeometry(box.maskCalc.width, box.maskCalc.height)]}
                     />
-                    <lineBasicMaterial color={CROP_MASK_BORDER_COLOR} linewidth={2} />
+                    <lineBasicMaterial
+                      color={CROP_MASK_BORDER_COLOR}
+                      linewidth={2}
+                      polygonOffset
+                      polygonOffsetFactor={-3}
+                      polygonOffsetUnits={-3}
+                    />
                   </lineSegments>
                 </mesh>
               )}
