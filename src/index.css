@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/**
+ * Design token overrides — IMAX-inspired visual language.
+ *
+ * Principles:
+ *   • Vivid cobalt blue (#0047BB) replaces violet as the sole accent colour
+ *   • All violet-* Tailwind utilities now render in the IMAX cobalt family
+ *   • Sharp geometry — maximum 4 px border-radius throughout
+ *   • Comparator canvas supports dynamic themes (light/dark)
+ *   • System sans-serif: clean, geometric, no external download required
+ */
+
+:root {
+  --brand: #0047bb;
+  --brand-hover: #003898;
+  --brand-muted: rgba(0, 71, 187, 0.1);
+  --app-bg: #f4f4f6;
+  --app-surface: #ffffff;
+  --app-border: rgba(0, 0, 0, 0.07);
+  --app-border-strong: rgba(0, 0, 0, 0.15);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --text-disabled: #cbd5e1;
+  --screen-crop-overlay: rgba(15, 23, 42, 0.6);
+}
+
+.dark {
+  --brand: #4a8dff;
+  --brand-hover: #8ab3ff;
+  --brand-muted: rgba(74, 141, 255, 0.15);
+  --app-bg: #080810;
+  --app-surface: #0e0e15;
+  --app-border: rgba(255, 255, 255, 0.07);
+  --app-border-strong: rgba(255, 255, 255, 0.15);
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.65);
+  --text-muted: rgba(255, 255, 255, 0.35);
+  --text-disabled: rgba(255, 255, 255, 0.2);
+  --screen-crop-overlay: rgba(8, 8, 16, 0.7);
+}
+
+@theme {
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-muted: var(--brand-muted);
+  --color-app-bg: var(--app-bg);
+  --color-app-surface: var(--app-surface);
+  --color-app-border: var(--app-border);
+  --color-app-border-strong: var(--app-border-strong);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-disabled: var(--text-disabled);
+  --color-screen-crop-overlay: var(--screen-crop-overlay);
+
+  /* ── Override violet → IMAX cobalt blue ───────────────────── */
+  --color-violet-50: #eef3ff;
+  --color-violet-100: #dce8ff;
+  --color-violet-200: #bad1ff;
+  --color-violet-300: #8ab3ff;
+  --color-violet-400: #4a8dff;
+  --color-violet-500: #1c62ef;
+  --color-violet-600: #0047bb; /* ← Primary brand accent */
+  --color-violet-700: #003898;
+  --color-violet-800: #002875;
+  --color-violet-900: #001952;
+  --color-violet-950: #000d30;
+
+  /* ── Cooler, deeper slate tones ────────────────────────────── */
+  --color-slate-50: #f4f4f6;
+  --color-slate-900: #0e0e15;
+  --color-slate-950: #080810;
+}
+
+@layer base {
+  html {
+    /* Geometric system sans — close to Nexa / Barlow without a download */
+    font-family:
+      -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, ui-sans-serif, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  /**
+   * .label-caps — cinematic section label style
+   * Mirrors IMAX.com's "RESULTS", "CINEMA FORMATS", "OUR COMPANY" labels.
+   * Use on section headings, column headers, and filter group titles.
+   */
+  .label-caps {
+    font-size: 0.6875rem; /* 11 px */
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+}

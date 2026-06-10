@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <style>
+    :root {
+      --brand: #0047bb;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --brand: #4a8dff;
+      }
+    }
+    .tile {
+      fill: var(--brand);
+    }
+    .widescreen {
+      stroke: #ffffff;
+      stroke-width: 1.8;
+      fill: rgba(255, 255, 255, 0.08);
+    }
+    .imax {
+      stroke: #ffffff;
+      stroke-width: 1.8;
+      stroke-opacity: 0.65;
+      fill: rgba(255, 255, 255, 0.04);
+    }
+  </style>
+  <!-- Background Brand Tile (30x30 rounded square, 4px corner radius) -->
+  <rect class="tile" x="1" y="1" width="30" height="30" rx="4" />
+  <!-- IMAX Screen (approx 1.43:1 aspect ratio, 20x14) -->
+  <rect class="imax" x="6" y="9" width="20" height="14" rx="1" />
+  <!-- Widescreen Screen (approx 2.39:1 aspect ratio, 26x10) -->
+  <rect class="widescreen" x="3" y="11" width="26" height="10" rx="1" />
+</svg>
