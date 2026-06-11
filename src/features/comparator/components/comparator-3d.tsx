@@ -25,6 +25,7 @@ const COLOR_LABEL_RECT_BACKGROUND = ""; // use e.g. "yellow" to debug sizing, or
 interface Comparator3DProps {
   selectedDbScreens: CinemaScreen[];
   customScreens: CustomScreen[];
+  order?: string[];
   layout: "horizontal" | "vertical" | "stacked" | "surround";
   mask: string;
   maskMode: string;
@@ -114,6 +115,7 @@ function CameraPositioner({
 export function Comparator3D({
   selectedDbScreens,
   customScreens,
+  order,
   layout,
   mask,
   maskMode,
@@ -151,8 +153,21 @@ export function Comparator3D({
       isCustom: true,
     }));
 
-    return [...dbItems, ...customItems];
-  }, [selectedDbScreens, customScreens]);
+    const combined = [...dbItems, ...customItems];
+
+    if (order && order.length > 0) {
+      combined.sort((a, b) => {
+        const indexA = order.indexOf(a.id);
+        const indexB = order.indexOf(b.id);
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return 0;
+      });
+    }
+
+    return combined;
+  }, [selectedDbScreens, customScreens, order]);
 
   const handleToggleGyro = async () => {
     // iOS permission flow

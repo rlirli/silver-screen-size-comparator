@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useScreens } from "@/features/database";
 import { useUrlState, type CustomScreen as CustomScreenType } from "@/features/url-state";
 import { Comparator2D } from "./components/comparator-2d";
@@ -59,6 +59,104 @@ export function Comparator() {
   // Map selected IDs to screen objects
   const selectedDbScreens = screens.filter((s) => state.selected.includes(s.id));
 
+  // Sync state.order with state.selected and state.custom
+  useEffect(() => {
+    const currentOrder = state.order || [];
+    const allSelectedIds = [...state.selected, ...state.custom.map((s) => s.id)];
+
+    // 1. Remove IDs from order that are no longer in allSelectedIds
+    let newOrder = currentOrder.filter((id) => allSelectedIds.includes(id));
+
+    // 2. Add IDs to order that are in allSelectedIds but not in order
+    const missingIds = allSelectedIds.filter((id) => !newOrder.includes(id));
+    if (missingIds.length > 0) {
+      newOrder = [...newOrder, ...missingIds];
+    }
+
+    // Only update if there is a difference to avoid infinite loop
+    const hasChanged =
+      newOrder.length !== currentOrder.length ||
+      newOrder.some((val, idx) => val !== currentOrder[idx]);
+
+    if (hasChanged) {
+      setState({ order: newOrder });
+    }
+  }, [state.selected, state.custom, state.order, setState]);
+
+  // Combine database screens and custom screens into a unified, ordered list
+  const activeItems = useMemo(() => {
+    const dbItems = selectedDbScreens.map((s) => ({
+      id: s.id,
+      name: s.venue.name,
+      fullName: `${s.venue.name} (${s.name})`,
+      isCustom: false,
+      width: s.dimensions.widthMeters,
+      height: s.dimensions.heightMeters,
+    }));
+
+    const customItems = state.custom.map((s) => ({
+      id: s.id,
+      name: s.name || "Custom Screen",
+      fullName: s.name || "Custom Screen",
+      isCustom: true,
+      width: s.width,
+      height: s.height,
+    }));
+
+    const combined = [...dbItems, ...customItems];
+
+    // Sort according to state.order
+    const order = state.order || [];
+    if (order.length > 0) {
+      combined.sort((a, b) => {
+        const indexA = order.indexOf(a.id);
+        const indexB = order.indexOf(b.id);
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return 0;
+      });
+    }
+    return combined;
+  }, [selectedDbScreens, state.custom, state.order]);
+
+  // Drag and drop states & handlers
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", index.toString());
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+    setDragOverIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === targetIndex) return;
+
+    const newItems = [...activeItems];
+    const [draggedItem] = newItems.splice(draggedIndex, 1);
+    newItems.splice(targetIndex, 0, draggedItem);
+
+    // Update state.order with the new sequence of IDs
+    const newOrder = newItems.map((item) => item.id);
+    setState({ order: newOrder });
+
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
   // Synchronise layout with placement changes
   const lastPlacement = useRef(compPlacement);
   const lastState = useRef(compState);
@@ -111,7 +209,7 @@ export function Comparator() {
   };
 
   const handleRemoveAll = () => {
-    setState({ selected: [], custom: [] });
+    setState({ selected: [], custom: [], order: [] });
   };
 
   const aspectMaskOptions = [
@@ -387,42 +485,54 @@ export function Comparator() {
           Custom
         </button>
 
-        {/* Database screens */}
-        {selectedDbScreens.map((s) => (
-          <div
-            key={s.id}
-            className="inline-flex items-center gap-1.5 px-2.5 py-0.5 border border-app-border text-xs font-medium text-text-secondary shrink-0"
-          >
-            <span className="truncate max-w-[140px]">{s.venue.name}</span>
-            <button
-              type="button"
-              onClick={() => handleRemoveDbScreen(s.id)}
-              className="text-text-muted hover:text-text-secondary transition-colors cursor-pointer"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </div>
-        ))}
+        {/* Unified draggable chips list */}
+        {activeItems.map((s, index) => {
+          const isDragged = draggedIndex === index;
+          const isDragOver = dragOverIndex === index;
+          const showLeftIndicator = isDragOver && draggedIndex !== null && draggedIndex > index;
+          const showRightIndicator = isDragOver && draggedIndex !== null && draggedIndex < index;
 
-        {/* Custom screens */}
-        {state.custom.map((s) => (
-          <div
-            key={s.id}
-            className="inline-flex items-center gap-1.5 px-2.5 py-0.5 border border-brand/35 text-xs font-medium text-brand shrink-0"
-          >
-            <span className="label-caps text-[8px] bg-brand text-white px-1.5 py-0.5 shrink-0">
-              C
-            </span>
-            <span className="truncate max-w-[140px]">{s.name}</span>
-            <button
-              type="button"
-              onClick={() => handleRemoveCustomScreen(s.id)}
-              className="text-brand/60 hover:text-brand transition-colors cursor-pointer"
+          return (
+            <div
+              key={s.id}
+              draggable
+              onDragStart={(e) => handleDragStart(e, index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragEnd={handleDragEnd}
+              onDrop={(e) => handleDrop(e, index)}
+              className={`relative inline-flex items-center gap-1.5 px-2.5 py-0.5 border text-xs font-medium transition-all duration-200 cursor-grab active:cursor-grabbing select-none shrink-0 ${
+                isDragged
+                  ? "border-brand/40 bg-brand/5 opacity-40 scale-95 border-dashed"
+                  : s.isCustom
+                    ? "border-brand/35 text-brand bg-brand/5 hover:bg-brand/10"
+                    : "border-app-border text-text-secondary bg-text-primary/5 hover:bg-text-primary/10"
+              }`}
             >
-              <X className="w-3 h-3" />
-            </button>
-          </div>
-        ))}
+              {showLeftIndicator && (
+                <div className="absolute -left-1 top-0 bottom-0 w-0.5 bg-brand animate-pulse" />
+              )}
+              {showRightIndicator && (
+                <div className="absolute -right-1 top-0 bottom-0 w-0.5 bg-brand animate-pulse" />
+              )}
+
+              {s.isCustom && (
+                <span className="label-caps text-[8px] bg-brand text-white px-1 py-0.5 shrink-0">
+                  C
+                </span>
+              )}
+              <span className="truncate max-w-[140px]">{s.name}</span>
+              <button
+                type="button"
+                onClick={() =>
+                  s.isCustom ? handleRemoveCustomScreen(s.id) : handleRemoveDbScreen(s.id)
+                }
+                className="text-text-muted hover:text-text-secondary transition-colors cursor-pointer"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          );
+        })}
       </div>
 
       {/* ── Primary display canvas (Viewport flexible, no double scrollbars, edge-to-edge) ── */}
@@ -431,6 +541,7 @@ export function Comparator() {
           <Comparator3D
             selectedDbScreens={selectedDbScreens}
             customScreens={state.custom}
+            order={state.order}
             layout={state.layout as "horizontal" | "vertical" | "stacked" | "surround"}
             mask={state.mask}
             maskMode={state.maskMode || "darken"}
@@ -442,6 +553,7 @@ export function Comparator() {
           <Comparator2D
             selectedDbScreens={selectedDbScreens}
             customScreens={state.custom}
+            order={state.order}
             layout={
               (state.layout === "surround" ? "horizontal" : state.layout) as
                 | "horizontal"

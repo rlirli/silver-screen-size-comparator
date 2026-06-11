@@ -32,6 +32,7 @@ export const urlStateSchema = {
     "ny-amc-lincoln-square-imax",
     "paris-pathe-beaugrenelle",
   ]),
+  order: parseAsArrayOf(parseAsString).withDefault([]),
   custom: parseAsJson<CustomScreen[]>((val) => {
     const parsed = z.array(CustomScreenSchema).safeParse(val);
     return parsed.success ? parsed.data : null;

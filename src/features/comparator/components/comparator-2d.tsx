@@ -18,6 +18,7 @@ const SCREEN_STROKE_NORMAL_LIGHT = "rgba(0, 0, 0, 0.35)";
 interface Comparator2DProps {
   selectedDbScreens: CinemaScreen[];
   customScreens: CustomScreen[];
+  order?: string[];
   layout: "horizontal" | "vertical" | "stacked";
   mask: string;
   maskMode: string;
@@ -39,6 +40,7 @@ interface RenderItem {
 export function Comparator2D({
   selectedDbScreens,
   customScreens,
+  order,
   layout,
   mask,
   maskMode,
@@ -243,8 +245,21 @@ export function Comparator2D({
       originalHeight: s.height,
     }));
 
-    return [...dbItems, ...customItems];
-  }, [selectedDbScreens, customScreens]);
+    const combined = [...dbItems, ...customItems];
+
+    if (order && order.length > 0) {
+      combined.sort((a, b) => {
+        const indexA = order.indexOf(a.id);
+        const indexB = order.indexOf(b.id);
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return 0;
+      });
+    }
+
+    return combined;
+  }, [selectedDbScreens, customScreens, order]);
 
   // Scale factor and coordinates calculation based on layout
   const layoutData = useMemo(() => {
