@@ -77,6 +77,14 @@
 }
 
 @layer base {
+  html,
+  body {
+    background-color: var(--app-bg);
+    color: var(--text-primary);
+    transition:
+      background-color 200ms ease,
+      color 200ms ease;
+  }
   html {
     /* Geometric system sans — close to Nexa / Barlow without a download */
     font-family:

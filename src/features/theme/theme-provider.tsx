@@ -1,6 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useSyncExternalStore } from "react";
 
+const FALLBACK_LIGHT_BG = "#f4f4f6";
+const FALLBACK_DARK_BG = "#080810";
+
 export type Theme = "light" | "dark" | "system";
 
 interface ThemeProviderProps {
@@ -37,6 +40,17 @@ export function ThemeProvider({ theme, children }: ThemeProviderProps) {
     const root = window.document.documentElement;
     root.classList.remove("light", "dark");
     root.classList.add(resolvedTheme);
+
+    // Update theme-color meta tag for mobile browsers
+    let metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (!metaThemeColor) {
+      metaThemeColor = document.createElement("meta");
+      metaThemeColor.setAttribute("name", "theme-color");
+      document.head.appendChild(metaThemeColor);
+    }
+    const computedBg = getComputedStyle(root).getPropertyValue("--app-bg").trim();
+    const color = computedBg || (resolvedTheme === "dark" ? FALLBACK_DARK_BG : FALLBACK_LIGHT_BG);
+    metaThemeColor.setAttribute("content", color);
   }, [resolvedTheme]);
 
   return <ThemeContext.Provider value={{ theme, resolvedTheme }}>{children}</ThemeContext.Provider>;
