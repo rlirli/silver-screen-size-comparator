@@ -8,8 +8,6 @@ import { Mannequin3D } from "./mannequin-3d";
 import { Button } from "@/components/ui/button";
 import { Compass, Rotate3d } from "lucide-react";
 import * as THREE from "three";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { TheatreSheet } from "@/features/theatre-sheet";
 import { useTheme } from "@/features/theme";
 
 const FLOOR_COLOR_DARK = "#0b0f19";
@@ -20,8 +18,8 @@ const GRID_COLOR_GRID_DARK = "#1e293b";
 const GRID_COLOR_GRID_LIGHT = "#cbd5e1";
 const SCREEN_FRAME_COLOR = "#1f2937";
 const SCREEN_CANVAS_COLOR = "#f8fafc";
-const CROP_MASK_OVERLAY_COLOR = "#1c62ef";
 const CROP_MASK_BORDER_COLOR = "#4a8dff";
+const COLOR_LABEL_RECT_BACKGROUND = ""; // use e.g. "yellow" to debug sizing, or transparent for production
 
 interface Comparator3DProps {
   selectedDbScreens: CinemaScreen[];
@@ -194,7 +192,7 @@ export function Comparator3D({
         // Largest in back (z = -max), smallest in front (z = 0)
         x = 0;
         y = item.effectiveH / 2;
-        z = -index * depthSpacing;
+        z = -(sortedItems.length - 1 - index) * depthSpacing;
       }
 
       return {
@@ -210,7 +208,7 @@ export function Comparator3D({
     return (
       <div className="flex flex-col items-center justify-center border border-dashed border-app-border h-full min-h-[300px] p-6 text-center bg-app-bg">
         <span className="font-semibold text-text-primary">No Screens Selected</span>
-        <p className="text-xs text-text-muted max-w-xs mt-1">
+        <p className="text-xs text-text-muted max-w-sm mt-1">
           Select screens in the Explorer below to compare them in 3D.
         </p>
       </div>
@@ -286,78 +284,179 @@ export function Comparator3D({
                 />
               </mesh>
 
-              {/* Active Picture Crop Mask Area Overlay (cobalt blue highlight plane) */}
-              {box.maskCalc.isMasked && maskMode === "darken" && (
-                <mesh position={[0, 0, thickness / 2 + 0.004]}>
-                  <planeGeometry args={[box.maskCalc.width - 0.08, box.maskCalc.height - 0.08]} />
-                  <meshStandardMaterial
-                    color={CROP_MASK_OVERLAY_COLOR}
-                    opacity={0.25}
-                    transparent
-                    roughness={0.5}
-                    polygonOffset
-                    polygonOffsetFactor={-2}
-                    polygonOffsetUnits={-2}
-                  />
-                  {/* Border line around active crop */}
-                  <lineSegments>
-                    <edgesGeometry
-                      args={[new THREE.PlaneGeometry(box.maskCalc.width, box.maskCalc.height)]}
-                    />
-                    <lineBasicMaterial
-                      color={CROP_MASK_BORDER_COLOR}
-                      linewidth={2}
-                      polygonOffset
-                      polygonOffsetFactor={-3}
-                      polygonOffsetUnits={-3}
-                    />
-                  </lineSegments>
-                </mesh>
-              )}
+              {/* Active Picture Crop Mask Area Overlay (darken areas outside crop, outline inside) */}
+              {box.maskCalc.isMasked &&
+                maskMode === "darken" &&
+                (() => {
+                  const innerW = box.effectiveW - 0.1;
+                  const innerH = box.effectiveH - 0.1;
+                  const maskRatio = parseFloat(mask);
+                  const isPillarbox = nativeRatio > maskRatio;
 
-              {/* HTML Annotation Labels (Top Left of Screen with Tooltips) */}
-              {showLabels && (
-                <Html
-                  position={[-box.effectiveW / 2, box.effectiveH / 2 + 0.35, 0]}
-                  center
-                  distanceFactor={15}
-                >
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="bg-app-surface border border-app-border text-text-primary px-2.5 py-1.5 text-left shadow-lg backdrop-blur-sm max-w-[220px] leading-tight cursor-help pointer-events-auto transition-colors group">
-                        <div className="font-bold text-xs truncate max-w-[200px] group-hover:text-brand transition-colors select-text">
+                  const cropW = isPillarbox ? innerH * maskRatio : innerW;
+                  const cropH = isPillarbox ? innerH : innerW / maskRatio;
+
+                  const overlayColor = resolvedTheme === "dark" ? "#080810" : "#0f172a";
+                  const overlayOpacity = resolvedTheme === "dark" ? 0.7 : 0.6;
+
+                  return (
+                    <group>
+                      {/* Darkened overlays outside active crop */}
+                      {isPillarbox ? (
+                        <>
+                          {/* Left Pillar */}
+                          <mesh
+                            position={[-(innerW + cropW) / 4, 0, thickness / 2 + 0.004]}
+                            receiveShadow
+                          >
+                            <planeGeometry args={[(innerW - cropW) / 2, innerH]} />
+                            <meshStandardMaterial
+                              color={overlayColor}
+                              opacity={overlayOpacity}
+                              transparent
+                              roughness={0.9}
+                              polygonOffset
+                              polygonOffsetFactor={-2}
+                              polygonOffsetUnits={-2}
+                            />
+                          </mesh>
+                          {/* Right Pillar */}
+                          <mesh
+                            position={[(innerW + cropW) / 4, 0, thickness / 2 + 0.004]}
+                            receiveShadow
+                          >
+                            <planeGeometry args={[(innerW - cropW) / 2, innerH]} />
+                            <meshStandardMaterial
+                              color={overlayColor}
+                              opacity={overlayOpacity}
+                              transparent
+                              roughness={0.9}
+                              polygonOffset
+                              polygonOffsetFactor={-2}
+                              polygonOffsetUnits={-2}
+                            />
+                          </mesh>
+                        </>
+                      ) : (
+                        <>
+                          {/* Top Letterbox */}
+                          <mesh
+                            position={[0, (innerH + cropH) / 4, thickness / 2 + 0.004]}
+                            receiveShadow
+                          >
+                            <planeGeometry args={[innerW, (innerH - cropH) / 2]} />
+                            <meshStandardMaterial
+                              color={overlayColor}
+                              opacity={overlayOpacity}
+                              transparent
+                              roughness={0.9}
+                              polygonOffset
+                              polygonOffsetFactor={-2}
+                              polygonOffsetUnits={-2}
+                            />
+                          </mesh>
+                          {/* Bottom Letterbox */}
+                          <mesh
+                            position={[0, -(innerH + cropH) / 4, thickness / 2 + 0.004]}
+                            receiveShadow
+                          >
+                            <planeGeometry args={[innerW, (innerH - cropH) / 2]} />
+                            <meshStandardMaterial
+                              color={overlayColor}
+                              opacity={overlayOpacity}
+                              transparent
+                              roughness={0.9}
+                              polygonOffset
+                              polygonOffsetFactor={-2}
+                              polygonOffsetUnits={-2}
+                            />
+                          </mesh>
+                        </>
+                      )}
+
+                      {/* Border line around active crop */}
+                      <group position={[0, 0, thickness / 2 + 0.005]}>
+                        <lineSegments>
+                          <edgesGeometry args={[new THREE.PlaneGeometry(cropW, cropH)]} />
+                          <lineBasicMaterial
+                            color={CROP_MASK_BORDER_COLOR}
+                            linewidth={2}
+                            polygonOffset
+                            polygonOffsetFactor={-3}
+                            polygonOffsetUnits={-3}
+                          />
+                        </lineSegments>
+                      </group>
+                    </group>
+                  );
+                })()}
+
+              {/* HTML Annotation Labels */}
+              {showLabels &&
+                (() => {
+                  let labelPos: [number, number, number];
+                  let innerStyle: React.CSSProperties = {};
+                  const df = 15;
+                  const scaleFactor = 400 / df;
+
+                  if (layout === "horizontal" || layout === "vertical") {
+                    labelPos = [
+                      -box.effectiveW / 2,
+                      box.effectiveH / 2 + 0.1,
+                      thickness / 2 + 0.01,
+                    ];
+                    innerStyle = {
+                      transform: "translate(50%, -50%)",
+                      width: `${box.effectiveW * scaleFactor}px`,
+                    };
+                  } else {
+                    // stacked
+                    labelPos = [
+                      -box.effectiveW / 2 + 0.15,
+                      box.effectiveH / 2 - 0.15,
+                      thickness / 2 + 0.01,
+                    ];
+                    innerStyle = {
+                      transform: "translate(50%, 50%)",
+                      width: `${(box.effectiveW - 0.3) * scaleFactor}px`,
+                    };
+                  }
+
+                  return (
+                    <Html
+                      position={labelPos}
+                      transform
+                      distanceFactor={df}
+                      occlude
+                      className="pointer-events-none select-none"
+                    >
+                      <div
+                        style={{
+                          ...innerStyle,
+                          backgroundColor: COLOR_LABEL_RECT_BACKGROUND,
+                        }}
+                        className="text-left leading-tight pointer-events-auto transition-colors group"
+                      >
+                        <div className="font-bold text-xs text-text-primary group-hover:text-brand transition-colors select-text">
                           {box.name}
                         </div>
-                        <div className="text-[10px] font-mono text-text-muted mt-0.5 select-none truncate leading-normal">
+                        <div className="text-[10px] font-mono text-text-secondary mt-0.5 select-none leading-normal">
                           {box.width.toFixed(1)}m x {box.height.toFixed(1)}m ·{" "}
                           {nativeRatio.toFixed(2)}:1 · {(box.width * box.height).toFixed(0)}m²
                         </div>
                       </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      {box.isCustom ? (
-                        <TheatreSheet
-                          customScreen={{
-                            id: box.id,
-                            name: box.name,
-                            width: box.width,
-                            height: box.height,
-                          }}
-                        />
-                      ) : (
-                        <TheatreSheet screen={selectedDbScreens.find((s) => s.id === box.id)} />
-                      )}
-                    </TooltipContent>
-                  </Tooltip>
-                </Html>
-              )}
+                    </Html>
+                  );
+                })()}
 
               {/* Center Area Label */}
               {showArea && (
                 <Html
-                  position={[0, 0, thickness / 2 + 0.02]}
+                  position={[0, 0, thickness / 2 + 0.01]}
                   center
+                  transform
                   distanceFactor={18}
+                  occlude
                   className="pointer-events-none select-none"
                 >
                   <div className="flex flex-col items-center justify-center text-center whitespace-nowrap">
@@ -366,7 +465,7 @@ export function Comparator3D({
                         <span className="text-[10px] font-bold text-brand">
                           {(box.width * box.height).toFixed(0)} m²
                         </span>
-                        <span className="text-[8.5px] font-medium text-text-muted mt-0.5">
+                        <span className="text-[8.5px] font-medium text-text-secondary mt-0.5">
                           {nativeRatio.toFixed(2)}:1 aspect ratio
                         </span>
                       </div>
@@ -375,7 +474,7 @@ export function Comparator3D({
                         <span className="text-[10px] font-bold text-brand">
                           {box.maskCalc.area.toFixed(0)} m²
                         </span>
-                        <span className="text-[8.5px] font-medium text-text-muted mt-0.5">
+                        <span className="text-[8.5px] font-medium text-text-secondary mt-0.5">
                           (in {parseFloat(mask).toFixed(2)}:1 aspect ratio)
                         </span>
                       </div>
