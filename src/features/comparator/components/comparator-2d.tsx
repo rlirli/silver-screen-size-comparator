@@ -639,7 +639,7 @@ export function Comparator2D({
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <div
-                              className="w-fit h-full text-left flex flex-col justify-end pointer-events-auto leading-tight cursor-help group"
+                              className="r2d-label-overlay w-fit h-full text-left flex flex-col justify-end pointer-events-auto leading-tight cursor-help group"
                               style={{ maxWidth: `${box.labelWidth}px` }}
                             >
                               <span className="font-bold text-[10px] text-text-primary group-hover:text-brand transition-colors line-clamp-2 select-text">
@@ -682,7 +682,7 @@ export function Comparator2D({
                       >
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <div className="w-max text-left flex flex-col pointer-events-auto leading-tight cursor-help group">
+                            <div className="r2d-label-overlay w-max text-left flex flex-col pointer-events-auto leading-tight cursor-help group">
                               <span className="font-bold text-[10px] text-text-primary group-hover:text-brand transition-colors whitespace-nowrap select-text">
                                 {box.name}
                               </span>
@@ -724,7 +724,7 @@ export function Comparator2D({
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <div
-                              className="w-fit text-left flex flex-col pointer-events-auto leading-tight cursor-help group"
+                              className="r2d-label-overlay w-fit text-left flex flex-col pointer-events-auto leading-tight cursor-help group"
                               style={{ maxWidth: `${box.labelWidth}px` }}
                             >
                               <span className="font-bold text-[10px] text-text-primary group-hover:text-brand transition-colors line-clamp-2 select-text">
@@ -817,7 +817,7 @@ export function Comparator2D({
                             className="overflow-visible pointer-events-none"
                           >
                             <div
-                              className={`w-full h-full flex flex-col ${alignClass} pointer-events-none`}
+                              className={`r2d-area-callout w-full h-full flex flex-col ${alignClass} pointer-events-none`}
                             >
                               <div className="flex flex-col leading-tight">
                                 <span className="text-[9px] font-bold text-brand">
@@ -841,7 +841,7 @@ export function Comparator2D({
                           height={50}
                           className="overflow-visible pointer-events-none"
                         >
-                          <div className="w-full h-full flex items-center justify-center pointer-events-none">
+                          <div className="r2d-area-centered w-full h-full flex items-center justify-center pointer-events-none">
                             <div className="flex flex-col items-center justify-center text-center">
                               <div className="flex flex-col items-center leading-tight">
                                 <span className="text-[10px] font-bold text-brand">

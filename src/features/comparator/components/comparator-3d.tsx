@@ -323,7 +323,7 @@ export function Comparator3D({
       <Canvas
         shadows
         camera={{ position: [0, 6, 22], fov: 55 }}
-        gl={{ logarithmicDepthBuffer: true }}
+        gl={{ logarithmicDepthBuffer: true, preserveDrawingBuffer: true }}
         onPointerMissed={() => setActiveScreenId(null)}
       >
         {/* Lights */}
@@ -554,7 +554,7 @@ export function Comparator3D({
                           ...innerStyle,
                           backgroundColor: COLOR_LABEL_RECT_BACKGROUND,
                         }}
-                        className="text-left leading-tight pointer-events-auto transition-colors group"
+                        className="r3f-label-overlay text-left leading-tight pointer-events-auto transition-colors group"
                       >
                         <div className="font-bold text-xs text-text-primary group-hover:text-brand transition-colors select-text">
                           {box.name}
@@ -622,7 +622,7 @@ export function Comparator3D({
                   occlude
                   className="pointer-events-none select-none"
                 >
-                  <div className="flex flex-col items-center justify-center text-center whitespace-nowrap">
+                  <div className="r3f-area-overlay flex flex-col items-center justify-center text-center whitespace-nowrap">
                     {!box.maskCalc.isMasked ? (
                       <div className="flex flex-col items-center leading-tight">
                         <span className="text-[10px] font-bold text-brand">
