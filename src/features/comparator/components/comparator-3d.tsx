@@ -25,7 +25,7 @@ const COLOR_LABEL_RECT_BACKGROUND = ""; // use e.g. "yellow" to debug sizing, or
 interface Comparator3DProps {
   selectedDbScreens: CinemaScreen[];
   customScreens: CustomScreen[];
-  layout: "horizontal" | "vertical" | "stacked";
+  layout: "horizontal" | "vertical" | "stacked" | "surround";
   mask: string;
   maskMode: string;
   showLabels: boolean;
@@ -76,6 +76,41 @@ function DeviceOrientationControls({ active }: { active: boolean }) {
   return null;
 }
 
+// Camera controller that manages camera position and target based on layout and active controls
+function CameraPositioner({
+  layout,
+  gyroActive,
+  surroundRadius,
+}: {
+  layout: string;
+  gyroActive: boolean;
+  surroundRadius: number;
+}) {
+  const { camera } = useThree();
+
+  useEffect(() => {
+    if (gyroActive) {
+      if (layout === "surround") {
+        camera.position.set(0, 1.55, 0);
+      } else {
+        camera.position.set(0, 1.55, 12);
+      }
+    } else {
+      if (layout === "horizontal") {
+        camera.position.set(0, 6, 22);
+      } else if (layout === "vertical") {
+        camera.position.set(0, 15, 30);
+      } else if (layout === "stacked") {
+        camera.position.set(0, 6, 20);
+      } else if (layout === "surround") {
+        camera.position.set(0, surroundRadius * 0.6 + 4, surroundRadius * 1.6 + 8);
+      }
+    }
+  }, [layout, gyroActive, surroundRadius, camera]);
+
+  return null;
+}
+
 export function Comparator3D({
   selectedDbScreens,
   customScreens,
@@ -92,6 +127,11 @@ export function Comparator3D({
     return typeof window !== "undefined" && "DeviceOrientationEvent" in window;
   });
   const [activeScreenId, setActiveScreenId] = useState<string | null>(null);
+
+  const controlsTarget = useMemo(() => {
+    if (layout === "vertical") return [0, 10, 0] as [number, number, number];
+    return [0, 2, 0] as [number, number, number];
+  }, [layout]);
 
   // Combine screens into unified lists
   const activeItems: Render3DItem[] = useMemo(() => {
@@ -136,6 +176,21 @@ export function Comparator3D({
     }
   };
 
+  // Calculate radius for surround layout (at least 10m for N=1,2, or dynamically computed for N>=3)
+  const surroundRadius = useMemo(() => {
+    if (activeItems.length === 0) return 10;
+    if (activeItems.length === 1 || activeItems.length === 2) return 10;
+
+    const activeItemsWithCrops = activeItems.map((item) => {
+      const maskCalc = calculateMaskedDimensions(item.width, item.height, mask);
+      const effectiveW = maskMode === "crop" ? maskCalc.width : item.width;
+      return effectiveW;
+    });
+
+    const totalPaddedWidth = activeItemsWithCrops.reduce((sum, w) => sum + w + 2, 0);
+    return totalPaddedWidth / (2 * Math.PI);
+  }, [activeItems, mask, maskMode]);
+
   // Calculate coordinates for 3D boxes
   const boxes3D = useMemo(() => {
     if (activeItems.length === 0) return [];
@@ -170,11 +225,13 @@ export function Comparator3D({
     totalWidth -= spacing; // strip last spacer
 
     let currentX = -totalWidth / 2;
+    let currentTheta = Math.PI;
 
     return sortedItems.map((item, index) => {
       let x: number;
       let y: number;
       let z: number;
+      let rotationY = 0;
 
       if (layout === "horizontal") {
         // Left-to-right on X-axis, resting on floor (Y = 0)
@@ -189,12 +246,39 @@ export function Comparator3D({
           sortedItems.slice(0, index).reduce((sum, s) => sum + s.effectiveH + spacing, 0) +
           item.effectiveH / 2;
         z = 0;
-      } else {
+      } else if (layout === "stacked") {
         // Stacked arrangement: layered along the Z-axis (front-to-back depth)
         // Largest in back (z = -max), smallest in front (z = 0)
         x = 0;
         y = item.effectiveH / 2;
         z = -(sortedItems.length - 1 - index) * depthSpacing;
+      } else {
+        // layout === "surround"
+        if (sortedItems.length === 1) {
+          x = 0;
+          y = item.effectiveH / 2;
+          z = -10;
+          rotationY = 0;
+        } else if (sortedItems.length === 2) {
+          x = 0;
+          y = item.effectiveH / 2;
+          z = index === 0 ? -10 : 10;
+          rotationY = index === 0 ? 0 : Math.PI;
+        } else {
+          // N >= 3
+          x = surroundRadius * Math.sin(currentTheta);
+          y = item.effectiveH / 2;
+          z = surroundRadius * Math.cos(currentTheta);
+          rotationY = currentTheta - Math.PI;
+
+          // Prepare theta for the next screen
+          if (index < sortedItems.length - 1) {
+            const nextItem = sortedItems[index + 1];
+            const angularSpacing =
+              (item.effectiveW + nextItem.effectiveW + 4) / (2 * surroundRadius);
+            currentTheta += angularSpacing;
+          }
+        }
       }
 
       return {
@@ -202,9 +286,10 @@ export function Comparator3D({
         x,
         y,
         z,
+        rotationY,
       };
     });
-  }, [activeItems, layout, mask, maskMode]);
+  }, [activeItems, layout, mask, maskMode, surroundRadius]);
 
   if (activeItems.length === 0) {
     return (
@@ -271,6 +356,7 @@ export function Comparator3D({
             <group
               key={box.id}
               position={[box.x, box.y, box.z]}
+              rotation={[0, box.rotationY || 0, 0]}
               onClick={(e) => {
                 e.stopPropagation();
                 setActiveScreenId(box.id);
@@ -548,15 +634,20 @@ export function Comparator3D({
           );
         })}
 
+        {/* Camera position and transition manager */}
+        <CameraPositioner layout={layout} gyroActive={gyroActive} surroundRadius={surroundRadius} />
+
         {/* 3D Scale Mannequin (resting at Y = 0) */}
-        {showMannequin && (
+        {showMannequin && !gyroActive && (
           <Mannequin3D
             position={
-              layout === "horizontal"
-                ? [boxes3D[0].x - boxes3D[0].effectiveW / 2 - 2.5, 0, 0]
-                : layout === "vertical"
-                  ? [boxes3D[0].effectiveW / 2 + 2, 0, 0]
-                  : [boxes3D[0].effectiveW / 2 + 1.8, 0, 0]
+              layout === "surround"
+                ? [0, 0, 0]
+                : layout === "horizontal"
+                  ? [boxes3D[0].x - boxes3D[0].effectiveW / 2 - 2.5, 0, 0]
+                  : layout === "vertical"
+                    ? [boxes3D[0].effectiveW / 2 + 2, 0, 0]
+                    : [boxes3D[0].effectiveW / 2 + 1.8, 0, 0]
             }
           />
         )}
@@ -567,6 +658,7 @@ export function Comparator3D({
         {/* Standard Orbit Drag Controls (Only active when gyro controls are disabled) */}
         {!gyroActive && (
           <OrbitControls
+            target={controlsTarget}
             enableDamping
             dampingFactor={0.05}
             minDistance={4}

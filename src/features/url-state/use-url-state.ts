@@ -37,7 +37,7 @@ export const urlStateSchema = {
     return parsed.success ? parsed.data : null;
   }).withDefault([]),
   view: parseAsString.withDefault("2d"), // '2d' | '3d'
-  layout: parseAsString.withDefault("horizontal"), // 'horizontal' | 'vertical' | 'stacked'
+  layout: parseAsString.withDefault("horizontal"), // 'horizontal' | 'vertical' | 'stacked' | 'surround'
   mask: parseAsString.withDefault("none"), // 'none' | '1.43' | '1.89' | '2.39' etc.
   maskMode: parseAsString.withDefault("darken"), // 'darken' | 'crop'
   showLabels: parseAsBoolean.withDefault(true),

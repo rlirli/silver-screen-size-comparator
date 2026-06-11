@@ -246,13 +246,23 @@ export function Comparator() {
           {/* Layout Mode */}
           <div className="flex items-center gap-0.5 h-8">
             <span className="label-caps text-text-muted mr-1.5 shrink-0">Layout</span>
-            {(["horizontal", "vertical", "stacked"] as const).map((lay) => (
+            {(state.view === "3d"
+              ? (["horizontal", "vertical", "stacked", "surround"] as const)
+              : (["horizontal", "vertical", "stacked"] as const)
+            ).map((lay) => (
               <button
                 key={lay}
+                title={lay.charAt(0).toUpperCase() + lay.slice(1)}
                 onClick={() => setState({ layout: lay })}
                 className={`${cmdBase} ${state.layout === lay ? cmdActive : cmdInactive}`}
               >
-                {lay === "horizontal" ? "H" : lay === "vertical" ? "V" : "S"}
+                {lay === "horizontal"
+                  ? "H"
+                  : lay === "vertical"
+                    ? "V"
+                    : lay === "stacked"
+                      ? "S"
+                      : "O"}
               </button>
             ))}
           </div>
@@ -264,7 +274,13 @@ export function Comparator() {
               <button
                 key={v}
                 type="button"
-                onClick={() => setState({ view: v })}
+                onClick={() => {
+                  const updates: any = { view: v };
+                  if (v === "2d" && state.layout === "surround") {
+                    updates.layout = "horizontal";
+                  }
+                  setState(updates);
+                }}
                 className={`${cmdBase} ${state.view === v ? cmdActive : cmdInactive}`}
               >
                 {v.toUpperCase()}
@@ -415,7 +431,7 @@ export function Comparator() {
           <Comparator3D
             selectedDbScreens={selectedDbScreens}
             customScreens={state.custom}
-            layout={state.layout as "horizontal" | "vertical" | "stacked"}
+            layout={state.layout as "horizontal" | "vertical" | "stacked" | "surround"}
             mask={state.mask}
             maskMode={state.maskMode || "darken"}
             showLabels={state.showLabels}
@@ -426,7 +442,12 @@ export function Comparator() {
           <Comparator2D
             selectedDbScreens={selectedDbScreens}
             customScreens={state.custom}
-            layout={state.layout as "horizontal" | "vertical" | "stacked"}
+            layout={
+              (state.layout === "surround" ? "horizontal" : state.layout) as
+                | "horizontal"
+                | "vertical"
+                | "stacked"
+            }
             mask={state.mask}
             maskMode={state.maskMode || "darken"}
             showLabels={state.showLabels}
