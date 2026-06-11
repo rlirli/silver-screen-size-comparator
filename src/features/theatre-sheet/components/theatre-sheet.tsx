@@ -18,7 +18,7 @@ export function TheatreSheet({ screen, customScreen }: TheatreSheetProps) {
     const ratio = customScreen.width / customScreen.height;
 
     return (
-      <div className="flex flex-col gap-3 w-60 text-left select-none">
+      <div className="flex flex-col gap-3 w-full text-left select-none">
         {/* Header */}
         <div className="flex flex-col gap-0.5 border-b border-app-border pb-2.5">
           <span className="text-[10px] font-semibold tracking-wide text-brand">Custom target</span>
@@ -77,7 +77,7 @@ export function TheatreSheet({ screen, customScreen }: TheatreSheetProps) {
   };
 
   return (
-    <div className="flex flex-col gap-3 w-68 text-left select-none leading-normal">
+    <div className="flex flex-col gap-3 w-full text-left select-none leading-normal">
       {/* Header */}
       <div className="flex flex-col border-b border-app-border pb-2.5 gap-1">
         <div className="flex justify-between items-start gap-2">

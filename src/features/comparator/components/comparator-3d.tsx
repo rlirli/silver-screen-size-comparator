@@ -8,6 +8,7 @@ import { Mannequin3D } from "./mannequin-3d";
 import { Button } from "@/components/ui/button";
 import { Compass, Rotate3d } from "lucide-react";
 import * as THREE from "three";
+import { TheatreSheet } from "@/features/theatre-sheet";
 import { useTheme } from "@/features/theme";
 
 const FLOOR_COLOR_DARK = "#0b0f19";
@@ -90,6 +91,7 @@ export function Comparator3D({
   const [gyroSupported] = useState(() => {
     return typeof window !== "undefined" && "DeviceOrientationEvent" in window;
   });
+  const [activeScreenId, setActiveScreenId] = useState<string | null>(null);
 
   // Combine screens into unified lists
   const activeItems: Render3DItem[] = useMemo(() => {
@@ -222,6 +224,7 @@ export function Comparator3D({
         shadows
         camera={{ position: [0, 6, 22], fov: 55 }}
         gl={{ logarithmicDepthBuffer: true }}
+        onPointerMissed={() => setActiveScreenId(null)}
       >
         {/* Lights */}
         <ambientLight intensity={0.55} />
@@ -265,7 +268,22 @@ export function Comparator3D({
           const nativeRatio = box.width / box.height;
 
           return (
-            <group key={box.id} position={[box.x, box.y, box.z]}>
+            <group
+              key={box.id}
+              position={[box.x, box.y, box.z]}
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveScreenId(box.id);
+              }}
+              onPointerOver={(e) => {
+                e.stopPropagation();
+                document.body.style.cursor = "pointer";
+              }}
+              onPointerOut={(e) => {
+                e.stopPropagation();
+                document.body.style.cursor = "auto";
+              }}
+            >
               {/* Outer Screen Frame Box */}
               <mesh castShadow receiveShadow>
                 <boxGeometry args={[box.effectiveW, box.effectiveH, thickness]} />
@@ -448,6 +466,50 @@ export function Comparator3D({
                     </Html>
                   );
                 })()}
+
+              {/* Screen-Space Click Tooltip */}
+              {activeScreenId === box.id && (
+                <Html
+                  position={[0, -box.effectiveH / 2, thickness / 2 + 0.05]}
+                  center={false}
+                  zIndexRange={[20000000, 20000000]}
+                  className="pointer-events-none select-none"
+                >
+                  <div
+                    style={{
+                      transform: "translate(-50%, 24px)",
+                      position: "relative",
+                    }}
+                    className="pointer-events-auto bg-app-surface border border-app-border p-3 shadow-xl backdrop-blur-md rounded-[4px] w-[306px]"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {/* Connector Line to screen bottom-middle border */}
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: "50%",
+                        top: "-24px",
+                        width: "2px",
+                        height: "24px",
+                      }}
+                      className="bg-brand/70 -translate-x-1/2"
+                    />
+
+                    {box.isCustom ? (
+                      <TheatreSheet
+                        customScreen={{
+                          id: box.id,
+                          name: box.name,
+                          width: box.width,
+                          height: box.height,
+                        }}
+                      />
+                    ) : (
+                      <TheatreSheet screen={selectedDbScreens.find((s) => s.id === box.id)} />
+                    )}
+                  </div>
+                </Html>
+              )}
 
               {/* Center Area Label */}
               {showArea && (
