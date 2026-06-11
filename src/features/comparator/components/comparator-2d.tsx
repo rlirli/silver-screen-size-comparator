@@ -144,7 +144,7 @@ export function Comparator2D({
 
   const hasActiveScreens = selectedDbScreens.length + customScreens.length > 0;
 
-  // Bind native non-passive wheel listener to the container when it mounts
+  // Bind native non-passive wheel and gesture listeners to the container when it mounts
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -155,9 +155,18 @@ export function Comparator2D({
       }
     };
 
+    const preventGesture = (e: Event) => {
+      e.preventDefault();
+    };
+
     container.addEventListener("wheel", listener, { passive: false });
+    container.addEventListener("gesturestart", preventGesture);
+    container.addEventListener("gesturechange", preventGesture);
+
     return () => {
       container.removeEventListener("wheel", listener);
+      container.removeEventListener("gesturestart", preventGesture);
+      container.removeEventListener("gesturechange", preventGesture);
     };
   }, [hasActiveScreens]);
 
