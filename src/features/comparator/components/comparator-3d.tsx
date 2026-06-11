@@ -63,9 +63,9 @@ function DeviceOrientationControls({ active }: { active: boolean }) {
     if (!active) return;
 
     // Convert angles to radians
-    const pitch = (orientation.beta - 90) * (Math.PI / 180); // Rotate Y
-    const yaw = -orientation.alpha * (Math.PI / 180); // Rotate X
-    const roll = orientation.gamma * (Math.PI / 180); // Rotate Z
+    const pitch = (orientation.beta - 90) * (Math.PI / 180); // Rotate X (Pitch)
+    const yaw = orientation.alpha * (Math.PI / 180); // Rotate Y (Yaw)
+    const roll = -orientation.gamma * (Math.PI / 180); // Rotate Z (Roll)
 
     // Interpolate camera rotation for smooth look-around
     const targetEuler = new THREE.Euler(pitch, yaw, roll, "YXZ");
