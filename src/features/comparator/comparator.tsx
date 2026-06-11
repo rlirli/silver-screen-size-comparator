@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useScreens } from "@/features/database";
 import { useUrlState, type CustomScreen as CustomScreenType } from "@/features/url-state";
-import { Comparator2D } from "./components/comparator-2d";
-import { Comparator3D } from "./components/comparator-3d";
 import { Comparator2DCanvas } from "./components/comparator-2d-canvas";
+import { Comparator3D } from "./components/comparator-3d";
 import { CustomScreen } from "./components/custom-screen";
 import {
   Plus,
@@ -366,7 +365,7 @@ export function Comparator() {
         console.error("Failed to export 3D view:", err);
         alert("Could not export 3D view as image.");
       }
-    } else if (state.view === "2dcanvas") {
+    } else {
       // 2D Canvas export
       const canvas = viewport.querySelector("canvas");
       if (!canvas) {
@@ -376,198 +375,12 @@ export function Comparator() {
       try {
         const url = canvas.toDataURL("image/png");
         const link = document.createElement("a");
-        link.download = `comparator-2d-canvas-${Date.now()}.png`;
+        link.download = `comparator-2d-${Date.now()}.png`;
         link.href = url;
         link.click();
       } catch (err) {
         console.error("Failed to export 2D canvas:", err);
         alert("Could not export 2D canvas as image.");
-      }
-    } else {
-      // 2D SVG export
-      const svg = viewport.querySelector("svg");
-      if (!svg) {
-        alert("2D visualizer SVG not found");
-        return;
-      }
-
-      try {
-        const svgRect = svg.getBoundingClientRect();
-
-        // Clone the SVG so we don't mutate the live element
-        const svgClone = svg.cloneNode(true) as SVGSVGElement;
-
-        // REMOVE foreignObject nodes to prevent blank rendering and cross-browser security exceptions
-        svgClone.querySelectorAll("foreignObject").forEach((fo) => fo.remove());
-
-        // Inline CSS variables & styles to ensure layout rendering is correct outside the browser context
-        let styles = "";
-        for (const sheet of Array.from(document.styleSheets)) {
-          try {
-            for (const rule of Array.from(sheet.cssRules)) {
-              styles += rule.cssText + "\n";
-            }
-          } catch (e) {
-            // Ignore cross-origin stylesheets
-          }
-        }
-        const styleEl = document.createElement("style");
-        styleEl.textContent = styles;
-        svgClone.appendChild(styleEl);
-
-        // Serialize the clean SVG clone
-        const svgString = new XMLSerializer().serializeToString(svgClone);
-        const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
-        const blobUrl = URL.createObjectURL(svgBlob);
-
-        // Load into an Image object
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          const width = svg.clientWidth || 1000;
-          const height = svg.clientHeight || 550;
-
-          // Render at 2x resolution for high-DPI display quality
-          const scale = 2;
-          canvas.width = width * scale;
-          canvas.height = height * scale;
-
-          const ctx = canvas.getContext("2d");
-          if (ctx) {
-            ctx.scale(scale, scale);
-
-            // Draw background matching theme variables
-            const isDark = document.documentElement.classList.contains("dark");
-            ctx.fillStyle = isDark ? "#080810" : "#f4f4f6";
-            ctx.fillRect(0, 0, width, height);
-
-            // Draw the background SVG (which now has no foreignObjects)
-            ctx.drawImage(img, 0, 0, width, height);
-
-            // Draw HTML Labels if enabled
-            if (state.showLabels) {
-              const labelDivs = viewport.querySelectorAll(
-                ".r2d-label-overlay",
-              ) as NodeListOf<HTMLElement>;
-              labelDivs.forEach((labelDiv) => {
-                const rect = labelDiv.getBoundingClientRect();
-                const x = rect.left - svgRect.left;
-                const y = rect.top - svgRect.top;
-
-                const titleEl = labelDiv.querySelector(".font-bold") as HTMLElement | null;
-                const descEl = labelDiv.querySelector(".font-mono") as HTMLElement | null;
-
-                if (titleEl) {
-                  const titleStyle = window.getComputedStyle(titleEl);
-                  ctx.font = `${titleStyle.fontWeight} ${titleStyle.fontSize} ${titleStyle.fontFamily}`;
-                  ctx.fillStyle = titleStyle.color;
-                  ctx.textAlign = "left";
-                  ctx.textBaseline = "top";
-                  ctx.fillText(titleEl.textContent || "", x, y);
-                }
-
-                if (descEl) {
-                  const descStyle = window.getComputedStyle(descEl);
-                  ctx.font = `${descStyle.fontWeight} ${descStyle.fontSize} ${descStyle.fontFamily}`;
-                  ctx.fillStyle = descStyle.color;
-                  ctx.textAlign = "left";
-                  ctx.textBaseline = "top";
-                  ctx.fillText(descEl.textContent || "", x, y + 16);
-                }
-              });
-            }
-
-            // Draw Area overlays if enabled
-            if (state.showArea) {
-              // 1. Draw Callout badges (small screens)
-              const calloutDivs = viewport.querySelectorAll(
-                ".r2d-area-callout",
-              ) as NodeListOf<HTMLElement>;
-              calloutDivs.forEach((div) => {
-                const rect = div.getBoundingClientRect();
-                const x = rect.left - svgRect.left;
-                const y = rect.top - svgRect.top;
-                const w = rect.width;
-
-                const areaEl = div.querySelector(".text-\\[9px\\]") as HTMLElement | null;
-                const ratioEl = div.querySelector(".text-\\[8px\\]") as HTMLElement | null;
-
-                // Center or right align based on classes
-                const isRightAligned = div.classList.contains("text-right");
-                const align = isRightAligned ? "right" : "center";
-                const drawX = isRightAligned ? x + w : x + w / 2;
-
-                if (areaEl) {
-                  const areaStyle = window.getComputedStyle(areaEl);
-                  ctx.font = `${areaStyle.fontWeight} ${areaStyle.fontSize} ${areaStyle.fontFamily}`;
-                  ctx.fillStyle = areaStyle.color;
-                  ctx.textAlign = align;
-                  ctx.textBaseline = "top";
-                  ctx.fillText(areaEl.textContent || "", drawX, y);
-                }
-
-                if (ratioEl) {
-                  const ratioStyle = window.getComputedStyle(ratioEl);
-                  ctx.font = `${ratioStyle.fontWeight} ${ratioStyle.fontSize} ${ratioStyle.fontFamily}`;
-                  ctx.fillStyle = ratioStyle.color;
-                  ctx.textAlign = align;
-                  ctx.textBaseline = "top";
-                  ctx.fillText(ratioEl.textContent || "", drawX, y + 12);
-                }
-              });
-
-              // 2. Draw Centered inside badges (large screens)
-              const centeredDivs = viewport.querySelectorAll(
-                ".r2d-area-centered",
-              ) as NodeListOf<HTMLElement>;
-              centeredDivs.forEach((div) => {
-                const rect = div.getBoundingClientRect();
-                const x = rect.left - svgRect.left;
-                const y = rect.top - svgRect.top;
-                const w = rect.width;
-                const h = rect.height;
-
-                const areaEl = div.querySelector(".text-\\[10px\\]") as HTMLElement | null;
-                const ratioEl = div.querySelector(".text-\\[8\\.5px\\]") as HTMLElement | null;
-
-                if (areaEl) {
-                  const areaStyle = window.getComputedStyle(areaEl);
-                  ctx.font = `${areaStyle.fontWeight} ${areaStyle.fontSize} ${areaStyle.fontFamily}`;
-                  ctx.fillStyle = areaStyle.color;
-                  ctx.textAlign = "center";
-                  ctx.textBaseline = "middle";
-                  ctx.fillText(areaEl.textContent || "", x + w / 2, y + h / 2 - 6);
-                }
-
-                if (ratioEl) {
-                  const ratioStyle = window.getComputedStyle(ratioEl);
-                  ctx.font = `${ratioStyle.fontWeight} ${ratioStyle.fontSize} ${ratioStyle.fontFamily}`;
-                  ctx.fillStyle = ratioStyle.color;
-                  ctx.textAlign = "center";
-                  ctx.textBaseline = "middle";
-                  ctx.fillText(ratioEl.textContent || "", x + w / 2, y + h / 2 + 7);
-                }
-              });
-            }
-
-            // Generate PNG data and download
-            const pngUrl = canvas.toDataURL("image/png");
-            const link = document.createElement("a");
-            link.download = `comparator-2d-${Date.now()}.png`;
-            link.href = pngUrl;
-            link.click();
-          }
-          URL.revokeObjectURL(blobUrl);
-        };
-        img.onerror = (err) => {
-          console.error("Failed to load SVG clone into Image:", err);
-          alert("Could not render 2D view to image canvas.");
-          URL.revokeObjectURL(blobUrl);
-        };
-        img.src = blobUrl;
-      } catch (err) {
-        console.error("Failed to export 2D view:", err);
-        alert("Could not export 2D view as image.");
       }
     }
   };
@@ -738,23 +551,23 @@ export function Comparator() {
             ))}
           </div>
 
-          {/* View Mode (2D / 2D Canvas / 3D Toggle) */}
+          {/* View Mode (2D / 3D Toggle) */}
           <div className="flex items-center gap-0.5 h-8">
             <span className="label-caps text-text-muted mr-1.5 shrink-0">View</span>
-            {(["2d", "2dcanvas", "3d"] as const).map((v) => (
+            {(["2d", "3d"] as const).map((v) => (
               <button
                 key={v}
                 type="button"
                 onClick={() => {
                   const updates: any = { view: v };
-                  if ((v === "2d" || v === "2dcanvas") && state.layout === "surround") {
+                  if (v === "2d" && state.layout === "surround") {
                     updates.layout = "horizontal";
                   }
                   setState(updates);
                 }}
                 className={`${cmdBase} ${state.view === v ? cmdActive : cmdInactive}`}
               >
-                {v === "2dcanvas" ? "2D (Canvas)" : v.toUpperCase()}
+                {v.toUpperCase()}
               </button>
             ))}
           </div>
@@ -922,25 +735,8 @@ export function Comparator() {
             showArea={state.showArea}
             showMannequin={state.showMannequin}
           />
-        ) : state.view === "2dcanvas" ? (
-          <Comparator2DCanvas
-            selectedDbScreens={selectedDbScreens}
-            customScreens={state.custom}
-            order={state.order}
-            layout={
-              (state.layout === "surround" ? "horizontal" : state.layout) as
-                | "horizontal"
-                | "vertical"
-                | "stacked"
-            }
-            mask={state.mask}
-            maskMode={state.maskMode || "darken"}
-            showLabels={state.showLabels}
-            showArea={state.showArea}
-            showMannequin={state.showMannequin}
-          />
         ) : (
-          <Comparator2D
+          <Comparator2DCanvas
             selectedDbScreens={selectedDbScreens}
             customScreens={state.custom}
             order={state.order}

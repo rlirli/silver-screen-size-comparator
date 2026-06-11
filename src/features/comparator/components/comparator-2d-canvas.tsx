@@ -41,7 +41,7 @@ export function Comparator2DCanvas({
 }: Comparator2DCanvasProps) {
   const { resolvedTheme } = useTheme();
 
-  // Virtual coordinate boundaries matching Comparator2D viewBox
+  // Virtual coordinate boundaries
   const virtualWidth = 1000;
   const virtualHeight = 550;
   const margin = 50;
@@ -134,7 +134,7 @@ export function Comparator2DCanvas({
     return combined;
   }, [selectedDbScreens, customScreens, order]);
 
-  // Scale factor and coordinates calculation based on layout (same formulas as 2D SVG)
+  // Scale factor and coordinates calculation based on layout
   const layoutData = useMemo(() => {
     if (activeItems.length === 0) return null;
 
@@ -305,8 +305,8 @@ export function Comparator2DCanvas({
     if (!canvas) return null;
 
     const rect = canvas.getBoundingClientRect();
-    let clientX = 0;
-    let clientY = 0;
+    let clientX: number;
+    let clientY: number;
 
     if ("touches" in e) {
       if (e.touches.length === 0) return null;
@@ -397,7 +397,7 @@ export function Comparator2DCanvas({
       if (touchDist === 0) return;
 
       const factor = dist / touchDist;
-      let nextZoom = Math.max(0.15, Math.min(12, zoom * factor));
+      const nextZoom = Math.max(0.15, Math.min(12, zoom * factor));
 
       const midX = (t1.clientX + t2.clientX) / 2;
       const midY = (t1.clientY + t2.clientY) / 2;
@@ -807,6 +807,7 @@ export function Comparator2DCanvas({
     showMannequin,
     maskMode,
     mask,
+    layout,
   ]);
 
   if (activeItems.length === 0) {
