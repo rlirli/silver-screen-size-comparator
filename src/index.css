@@ -14,6 +14,7 @@
  */
 
 :root {
+  color-scheme: light;
   --brand: #0047bb;
   --brand-hover: #003898;
   --brand-muted: rgba(0, 71, 187, 0.1);
@@ -29,6 +30,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --brand: #4a8dff;
   --brand-hover: #8ab3ff;
   --brand-muted: rgba(74, 141, 255, 0.15);

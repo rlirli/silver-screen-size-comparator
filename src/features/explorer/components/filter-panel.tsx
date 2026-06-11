@@ -35,6 +35,7 @@ export function FilterPanel({ availableStandards, filteredScreens }: FilterPanel
     { value: "screen.widthMeters", label: "Screen Width" },
     { value: "screen.heightMeters", label: "Screen Height" },
     { value: "screen.area", label: "Total Area" },
+    { value: "location.city", label: "City" },
     { value: "location.country", label: "Country" },
   ];
 

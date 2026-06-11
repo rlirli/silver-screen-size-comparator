@@ -113,6 +113,9 @@ export function Explorer() {
       } else if (state.sortBy === "location.country") {
         valA = a.venue.location.country;
         valB = b.venue.location.country;
+      } else if (state.sortBy === "location.city") {
+        valA = a.venue.location.city;
+        valB = b.venue.location.city;
       } else {
         // Default to cinemaName
         valA = a.venue.name;
@@ -248,14 +251,14 @@ export function Explorer() {
         </div>
 
         {/* Tab Contents */}
-        <div className="flex-1 min-h-0 overflow-hidden relative p-4 md:p-6">
+        <div className="flex-1 min-h-0 overflow-hidden relative p-0 md:p-6">
           {activeTab === "list" && (
             <div className="h-full w-full overflow-hidden">
               <ListView screens={filteredAndSortedScreens} />
             </div>
           )}
           {activeTab === "map" && (
-            <div className="h-full w-full overflow-hidden rounded-none border border-app-border">
+            <div className="h-full w-full overflow-hidden rounded-none border-0 md:border border-app-border">
               <MapView screens={filteredAndSortedScreens} />
             </div>
           )}
@@ -267,7 +270,7 @@ export function Explorer() {
               {/* Left Side: ListView */}
               <div
                 style={{ width: `${splitPercent}%` }}
-                className="h-full min-w-[20%] max-w-[80%] overflow-hidden flex flex-col p-4 bg-app-bg"
+                className="h-full min-w-[20%] max-w-[80%] overflow-hidden flex flex-col p-0 bg-app-bg pt-1"
               >
                 <ListView screens={filteredAndSortedScreens} />
               </div>

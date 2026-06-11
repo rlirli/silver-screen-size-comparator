@@ -10,7 +10,7 @@ import {
   getSortedRowModel,
   type SortingState,
 } from "@tanstack/react-table";
-import { useState, useMemo, useCallback } from "react";
+import { useMemo, useCallback } from "react";
 import { Check } from "lucide-react";
 
 interface ListViewProps {
@@ -51,7 +51,23 @@ const columnHelper = createColumnHelper<CinemaScreen>();
 
 export function ListView({ screens }: ListViewProps) {
   const [state, setState] = useUrlState();
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const sorting = useMemo<SortingState>(
+    () => [{ id: state.sortBy, desc: state.sortDesc }],
+    [state.sortBy, state.sortDesc],
+  );
+
+  const setSorting = useCallback(
+    (updaterOrValue: SortingState | ((old: SortingState) => SortingState)) => {
+      const nextSorting =
+        typeof updaterOrValue === "function" ? updaterOrValue(sorting) : updaterOrValue;
+      if (nextSorting.length > 0) {
+        setState({ sortBy: nextSorting[0].id, sortDesc: nextSorting[0].desc });
+      } else {
+        setState({ sortBy: "cinemaName", sortDesc: false });
+      }
+    },
+    [sorting, setState],
+  );
 
   const handleToggleSelect = useCallback(
     (id: string) => {
@@ -78,13 +94,13 @@ export function ListView({ screens }: ListViewProps) {
               <button
                 type="button"
                 onClick={() => handleToggleSelect(id)}
-                className={`w-6 h-6 rounded-full border flex items-center justify-center transition-all cursor-pointer ${
+                className={`w-5 ml-2 sm:ml-0  h-5 sm:w-6 sm:h-6 rounded-full border flex items-center justify-center transition-all cursor-pointer ${
                   isSelected
                     ? "bg-brand border-brand text-white"
                     : "bg-transparent border-app-border-strong hover:border-brand"
                 }`}
               >
-                {isSelected && <Check className="w-3 h-3" />}
+                {isSelected && <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
               </button>
             </div>
           );
@@ -120,20 +136,21 @@ export function ListView({ screens }: ListViewProps) {
         },
       }),
       columnHelper.accessor((row) => row.venue.location.city, {
-        id: "city",
-        header: "Location",
-        cell: (info) => {
-          const row = info.row.original;
-          return (
-            <div className="text-left text-[11px] text-text-secondary">
-              {row.venue.location.city}
-              <span className="text-text-muted">, {row.venue.location.country}</span>
-            </div>
-          );
-        },
+        id: "location.city",
+        header: "City",
+        cell: (info) => (
+          <div className="text-left text-[11px] text-text-secondary">{info.getValue()}</div>
+        ),
+      }),
+      columnHelper.accessor((row) => row.venue.location.country, {
+        id: "location.country",
+        header: "Country",
+        cell: (info) => (
+          <div className="text-left text-[11px] text-text-secondary">{info.getValue()}</div>
+        ),
       }),
       columnHelper.accessor((row) => row.dimensions.widthMeters, {
-        id: "widthMeters",
+        id: "screen.widthMeters",
         header: "Dimensions",
         cell: (info) => {
           const row = info.row.original;
@@ -147,35 +164,46 @@ export function ListView({ screens }: ListViewProps) {
           );
         },
       }),
-      columnHelper.accessor((row) => row.dimensions.widthMeters, {
-        id: "area",
-        header: "Screen Area",
-        cell: (info) => {
-          const row = info.row.original;
+      columnHelper.accessor(
+        (row) => {
           const nativeArea = row.dimensions.widthMeters * row.dimensions.heightMeters;
           const maskCalc = calculateMaskedDimensions(
             row.dimensions.widthMeters,
             row.dimensions.heightMeters,
             state.mask,
           );
-          return (
-            <div className="text-left font-mono">
-              {maskCalc.isMasked ? (
-                <>
-                  <div className="text-[11px] font-semibold text-brand">
-                    {maskCalc.area.toFixed(1)} m²
-                  </div>
-                  <div className="text-[11px] text-text-disabled line-through mt-0.5">
-                    {nativeArea.toFixed(1)} m²
-                  </div>
-                </>
-              ) : (
-                <div className="text-[11px] text-text-secondary">{nativeArea.toFixed(1)} m²</div>
-              )}
-            </div>
-          );
+          return maskCalc.isMasked ? maskCalc.area : nativeArea;
         },
-      }),
+        {
+          id: "screen.area",
+          header: "Screen Area",
+          cell: (info) => {
+            const row = info.row.original;
+            const nativeArea = row.dimensions.widthMeters * row.dimensions.heightMeters;
+            const maskCalc = calculateMaskedDimensions(
+              row.dimensions.widthMeters,
+              row.dimensions.heightMeters,
+              state.mask,
+            );
+            return (
+              <div className="text-left font-mono">
+                {maskCalc.isMasked ? (
+                  <>
+                    <div className="text-[11px] font-semibold text-brand">
+                      {maskCalc.area.toFixed(1)} m²
+                    </div>
+                    <div className="text-[11px] text-text-disabled line-through mt-0.5">
+                      {nativeArea.toFixed(1)} m²
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-[11px] text-text-secondary">{nativeArea.toFixed(1)} m²</div>
+                )}
+              </div>
+            );
+          },
+        },
+      ),
       columnHelper.accessor(
         (row) => row.provenance["dimensions.widthMeters"]?.sourceType || "lfexaminer",
         {
@@ -224,9 +252,9 @@ export function ListView({ screens }: ListViewProps) {
   });
 
   return (
-    <div className="flex flex-col gap-4 h-full overflow-hidden">
+    <div className="flex flex-col gap-2 h-full overflow-hidden">
       {/* Stats row */}
-      <div className="flex justify-between items-center py-2 flex-shrink-0">
+      <div className="flex justify-between items-center px-4 md:px-2 flex-shrink-0">
         <div>
           <span className="text-sm font-semibold text-text-primary">{screens.length}</span>
           <span className="text-xs text-text-muted ml-1.5">screens found</span>
@@ -238,10 +266,7 @@ export function ListView({ screens }: ListViewProps) {
         <table className="w-full border-collapse">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
-              <tr
-                key={headerGroup.id}
-                className="border-b border-black/[0.06] dark:border-white/[0.06]"
-              >
+              <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
@@ -250,7 +275,9 @@ export function ListView({ screens }: ListViewProps) {
                         ? header.column.getToggleSortingHandler()
                         : undefined
                     }
-                    className={`px-3 py-2 text-left label-caps text-text-muted ${
+                    className={`sticky top-0 bg-app-bg z-10 border-b border-black/[0.06] dark:border-white/[0.06] py-2 text-left label-caps text-text-muted ${
+                      header.column.id === "select" ? "w-8 px-1 sm:px-3 text-center" : "px-3"
+                    } ${
                       header.column.getCanSort()
                         ? "cursor-pointer select-none hover:text-brand"
                         : ""
@@ -277,7 +304,12 @@ export function ListView({ screens }: ListViewProps) {
                 className="border-b border-black/[0.04] dark:border-white/[0.04] hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
               >
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-3 py-2.5 align-middle">
+                  <td
+                    key={cell.id}
+                    className={`py-2.5 align-middle ${
+                      cell.column.id === "select" ? "w-8 px-1 sm:px-3 text-center" : "px-3"
+                    }`}
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}

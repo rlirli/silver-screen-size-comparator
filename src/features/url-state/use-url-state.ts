@@ -21,8 +21,8 @@ export const urlStateSchema = {
   search: parseAsString.withDefault(""),
   standards: parseAsArrayOf(parseAsString).withDefault([]),
   movies: parseAsString.withDefault("both"), // 'commercial' | 'institutional' | 'both'
-  sortBy: parseAsString.withDefault("cinemaName"),
-  sortDesc: parseAsBoolean.withDefault(false),
+  sortBy: parseAsString.withDefault("screen.area"),
+  sortDesc: parseAsBoolean.withDefault(true),
   mapRects: parseAsString.withDefault("selected"), // 'all' | 'selected' | 'none'
   explorerTab: parseAsString.withDefault("list"), // 'list' | 'map' | 'split'
 
