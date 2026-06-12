@@ -66,6 +66,10 @@ export function Comparator2DCanvas({
   const [hoveredScreenId, setHoveredScreenId] = useState<string | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
+  // Whether at least one screen box is within the visible canvas area.
+  // Initialised to true so there is no false flash on mount.
+  const [screensInView, setScreensInView] = useState(true);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -297,6 +301,12 @@ export function Comparator2DCanvas({
       mannequin: { x: mannequinX, y: mannequinY },
     };
   }, [activeItems, layout, showMannequin, mask, maskMode, showLabels]);
+
+  // Reset visibility flag whenever the screen selection / layout changes so the
+  // overlay never shows stale state immediately after a selection update.
+  useEffect(() => {
+    setScreensInView(true);
+  }, [layoutData]);
 
   // Convert mouse event coordinates to virtual space coordinates
   const getVirtualCoords = (e: React.MouseEvent | React.TouchEvent) => {
@@ -806,6 +816,11 @@ export function Comparator2DCanvas({
     });
 
     ctx.restore();
+
+    // ── Viewport visibility check ──
+    // Runs as a natural byproduct of the draw pass: all transform values
+    // (scale, dx, dy, pan, zoom, w, h) are already computed above.
+    setScreensInView(isAnyBoxVisible(layoutData.renderedBoxes, w, h, scale, dx, dy, pan, zoom));
   }, [
     layoutData,
     redrawTick,
@@ -856,6 +871,20 @@ export function Comparator2DCanvas({
           <RefreshCw className="w-3 h-3" /> Reset
         </button>
       </div>
+
+      {/* Out-of-view reset overlay — shown when all screens have been panned off canvas */}
+      {!screensInView && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+          <button
+            id="comparator-2d-reset-view"
+            type="button"
+            onClick={handleResetView}
+            className="pointer-events-auto bg-brand hover:bg-brand-hover text-white px-4 py-2.5 font-semibold text-xs tracking-wider uppercase shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5" /> Screens Out of View — Reset View
+          </button>
+        </div>
+      )}
 
       <div className="absolute top-3 left-3 z-10 pointer-events-none px-2 py-1 text-[10px] text-text-muted flex items-center gap-1.5 font-medium">
         <Move className="w-3 h-3" /> Drag to pan · Scroll to zoom
@@ -908,4 +937,39 @@ export function Comparator2DCanvas({
       )}
     </div>
   );
+}
+
+/**
+ * Returns true if at least one box in `renderedBoxes` overlaps the visible canvas
+ * area [0, w] × [0, h], given the current coordinate transform.
+ *
+ * The full transform from virtual-space to canvas pixel is:
+ *   canvas_x = dx + scale * (pan.x + zoom * vx)
+ *   canvas_y = dy + scale * (pan.y + zoom * vy)
+ *
+ * A box with virtual-space rect (box.x, box.y, box.wPx, box.hPx) is visible when
+ * its projected rect intersects the canvas area.
+ */
+function isAnyBoxVisible(
+  renderedBoxes: ReadonlyArray<{ x: number; y: number; wPx: number; hPx: number }>,
+  w: number,
+  h: number,
+  scale: number,
+  dx: number,
+  dy: number,
+  pan: { x: number; y: number },
+  zoom: number,
+): boolean {
+  for (const box of renderedBoxes) {
+    const left = dx + scale * (pan.x + zoom * box.x);
+    const top = dy + scale * (pan.y + zoom * box.y);
+    const right = dx + scale * (pan.x + zoom * (box.x + box.wPx));
+    const bottom = dy + scale * (pan.y + zoom * (box.y + box.hPx));
+
+    // AABB overlap test: boxes overlap when neither is fully outside the other
+    if (right > 0 && left < w && bottom > 0 && top < h) {
+      return true;
+    }
+  }
+  return false;
 }
