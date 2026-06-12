@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Html } from "@react-three/drei";
 import { type CinemaScreen } from "@/features/database";
@@ -43,7 +43,13 @@ interface Render3DItem {
 }
 
 // Device orientation controller that updates camera rotation based on gyro data
-function DeviceOrientationControls({ active }: { active: boolean }) {
+function DeviceOrientationControls({
+  active,
+  controlsRef,
+}: {
+  active: boolean;
+  controlsRef: React.RefObject<any>;
+}) {
   const { camera } = useThree();
   const [orientation, setOrientation] = useState({ alpha: 0, beta: 90, gamma: 0 });
 
@@ -72,6 +78,13 @@ function DeviceOrientationControls({ active }: { active: boolean }) {
     const targetEuler = new THREE.Euler(pitch, yaw, roll, "YXZ");
     const targetQuaternion = new THREE.Quaternion().setFromEuler(targetEuler);
     camera.quaternion.slerp(targetQuaternion, 0.1);
+
+    if (controlsRef.current) {
+      const target = controlsRef.current.target;
+      const distance = camera.position.distanceTo(target);
+      const lookDir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+      camera.position.copy(target).addScaledVector(lookDir, -distance);
+    }
   });
 
   return null;
@@ -125,6 +138,7 @@ export function Comparator3D({
 }: Comparator3DProps) {
   const { resolvedTheme } = useTheme();
   const [gyroActive, setGyroActive] = useState(false);
+  const controlsRef = useRef<any>(null);
   const [gyroSupported] = useState(() => {
     return typeof window !== "undefined" && "DeviceOrientationEvent" in window;
   });
@@ -668,19 +682,19 @@ export function Comparator3D({
         )}
 
         {/* Gyro Sensor controls */}
-        <DeviceOrientationControls active={gyroActive} />
+        <DeviceOrientationControls active={gyroActive} controlsRef={controlsRef} />
 
-        {/* Standard Orbit Drag Controls (Only active when gyro controls are disabled) */}
-        {!gyroActive && (
-          <OrbitControls
-            target={controlsTarget}
-            enableDamping
-            dampingFactor={0.05}
-            minDistance={4}
-            maxDistance={80}
-            maxPolarAngle={Math.PI / 2 - 0.05} // prevent going underneath ground plane
-          />
-        )}
+        {/* Standard Orbit Drag Controls */}
+        <OrbitControls
+          ref={controlsRef}
+          target={controlsTarget}
+          enableDamping
+          dampingFactor={0.05}
+          minDistance={4}
+          maxDistance={80}
+          maxPolarAngle={Math.PI / 2 - 0.05} // prevent going underneath ground plane
+          enableRotate={!gyroActive}
+        />
       </Canvas>
 
       {/* Gyro toggle button for mobile/Vision Pro overlays */}
