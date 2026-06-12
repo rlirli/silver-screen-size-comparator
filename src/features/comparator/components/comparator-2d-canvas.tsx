@@ -68,7 +68,19 @@ export function Comparator2DCanvas({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [dimensions, setDimensions] = useState({ width: 1000, height: 550 });
+
+  // A tick that increments whenever the container is resized, triggering a redraw.
+  // We deliberately do NOT store dimensions in state — instead the draw loop reads
+  // canvas.clientWidth / canvas.clientHeight directly, so there is no stale initial
+  // value that could mismatch the real CSS layout size on first render.
+  const [redrawTick, setRedrawTick] = useState(0);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver(() => setRedrawTick((t) => t + 1));
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   // Reset viewport when layout changes
   const [prevLayout, setPrevLayout] = useState(layout);
@@ -77,19 +89,6 @@ export function Comparator2DCanvas({
     setPan({ x: 0, y: 0 });
     setZoom(1);
   }
-
-  // Handle responsive resizing
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const observer = new ResizeObserver((entries) => {
-      if (entries[0]) {
-        const { width, height } = entries[0].contentRect;
-        setDimensions({ width: width || 1000, height: height || 550 });
-      }
-    });
-    observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, []);
 
   const handleResetView = () => {
     setPan({ x: 0, y: 0 });
@@ -320,9 +319,11 @@ export function Comparator2DCanvas({
     const mouseX = clientX - rect.left;
     const mouseY = clientY - rect.top;
 
-    const scale = Math.min(dimensions.width / virtualWidth, dimensions.height / virtualHeight);
-    const dx = (dimensions.width - virtualWidth * scale) / 2;
-    const dy = (dimensions.height - virtualHeight * scale) / 2;
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    const scale = Math.min(w / virtualWidth, h / virtualHeight);
+    const dx = (w - virtualWidth * scale) / 2;
+    const dy = (h - virtualHeight * scale) / 2;
 
     const xInVirtual = (mouseX - dx) / scale;
     const yInVirtual = (mouseY - dy) / scale;
@@ -408,9 +409,11 @@ export function Comparator2DCanvas({
         const mouseX = midX - rect.left;
         const mouseY = midY - rect.top;
 
-        const scale = Math.min(dimensions.width / virtualWidth, dimensions.height / virtualHeight);
-        const dx = (dimensions.width - virtualWidth * scale) / 2;
-        const dy = (dimensions.height - virtualHeight * scale) / 2;
+        const w = canvas.clientWidth;
+        const h = canvas.clientHeight;
+        const scale = Math.min(w / virtualWidth, h / virtualHeight);
+        const dx = (w - virtualWidth * scale) / 2;
+        const dy = (h - virtualHeight * scale) / 2;
 
         const xInVirtual = (mouseX - dx) / scale;
         const yInVirtual = (mouseY - dy) / scale;
@@ -451,9 +454,11 @@ export function Comparator2DCanvas({
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
 
-        const scale = Math.min(dimensions.width / virtualWidth, dimensions.height / virtualHeight);
-        const dx = (dimensions.width - virtualWidth * scale) / 2;
-        const dy = (dimensions.height - virtualHeight * scale) / 2;
+        const w = canvas.clientWidth;
+        const h = canvas.clientHeight;
+        const scale = Math.min(w / virtualWidth, h / virtualHeight);
+        const dx = (w - virtualWidth * scale) / 2;
+        const dy = (h - virtualHeight * scale) / 2;
 
         const xInVirtual = (mouseX - dx) / scale;
         const yInVirtual = (mouseY - dy) / scale;
@@ -476,7 +481,7 @@ export function Comparator2DCanvas({
 
     canvas.addEventListener("wheel", handleWheel, { passive: false });
     return () => canvas.removeEventListener("wheel", handleWheel);
-  }, [zoom, pan, dimensions]);
+  }, [zoom, pan]);
 
   // Main Canvas Rendering Loop
   useEffect(() => {
@@ -486,22 +491,27 @@ export function Comparator2DCanvas({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    // Read true CSS layout size directly from the element — never from stale state.
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    if (w === 0 || h === 0) return;
+
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = dimensions.width * dpr;
-    canvas.height = dimensions.height * dpr;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
     ctx.scale(dpr, dpr);
 
     // Clear background
     const isDark = resolvedTheme === "dark";
     ctx.fillStyle = isDark ? "#080810" : "#f4f4f6";
-    ctx.fillRect(0, 0, dimensions.width, dimensions.height);
+    ctx.fillRect(0, 0, w, h);
 
     ctx.save();
 
     // Map container pixels to virtual coordinates (1000x550) preserving aspect ratio
-    const scale = Math.min(dimensions.width / virtualWidth, dimensions.height / virtualHeight);
-    const dx = (dimensions.width - virtualWidth * scale) / 2;
-    const dy = (dimensions.height - virtualHeight * scale) / 2;
+    const scale = Math.min(w / virtualWidth, h / virtualHeight);
+    const dx = (w - virtualWidth * scale) / 2;
+    const dy = (h - virtualHeight * scale) / 2;
 
     ctx.translate(dx, dy);
     ctx.scale(scale, scale);
@@ -798,7 +808,7 @@ export function Comparator2DCanvas({
     ctx.restore();
   }, [
     layoutData,
-    dimensions,
+    redrawTick,
     pan,
     zoom,
     resolvedTheme,
