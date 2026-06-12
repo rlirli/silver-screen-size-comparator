@@ -103,7 +103,7 @@ export function Comparator2DCanvas({
   const activeItems: RenderItem[] = useMemo(() => {
     const dbItems = selectedDbScreens.map((s) => ({
       id: s.id,
-      name: `${s.venue.name} (${s.name})`,
+      name: `${s.venue.name} (${s.venue.location.city})`,
       width: s.dimensions.widthMeters,
       height: s.dimensions.heightMeters,
       isCustom: false,
