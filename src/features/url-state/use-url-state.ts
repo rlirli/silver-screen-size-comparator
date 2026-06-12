@@ -28,9 +28,9 @@ export const urlStateSchema = {
 
   // Comparator state
   selected: parseAsArrayOf(parseAsString).withDefault([
-    "leonberg-traumpalast-imax",
-    "ny-amc-lincoln-square-imax",
-    "paris-pathe-beaugrenelle",
+    "germany_leonberg_imax-leonberg#imax",
+    "usa_new-york_amc-lincoln-square-13-imax#imax",
+    "france_paris_pathe-la-villette-imax#imax",
   ]),
   order: parseAsArrayOf(parseAsString).withDefault([]),
   custom: parseAsJson<CustomScreen[]>((val) => {
