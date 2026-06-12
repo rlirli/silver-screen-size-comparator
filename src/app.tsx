@@ -106,7 +106,7 @@ function MainLayout() {
 
   return (
     <div
-      className={`h-screen w-screen overflow-hidden flex flex-col bg-app-bg text-text-primary transition-colors duration-200 ${
+      className={`h-dvh w-screen overflow-hidden flex flex-col bg-app-bg text-text-primary transition-colors duration-200 ${
         isResizingComp ? "select-none" : ""
       }`}
     >
@@ -211,7 +211,7 @@ function MainLayout() {
         </div>
 
         {/* MOBILE VIEWPORT LAYOUT */}
-        <div className="flex md:hidden flex-1 flex-col overflow-hidden w-full h-full pb-12">
+        <div className="flex md:hidden flex-1 flex-col overflow-hidden w-full h-full">
           <div className="flex-1 overflow-y-auto min-h-0">
             {mobileTab === "explore" ? (
               <Explorer />
@@ -223,7 +223,7 @@ function MainLayout() {
           </div>
 
           {/* Sticky bottom mobile navigation */}
-          <nav className="fixed bottom-0 left-0 right-0 h-12 border-t border-app-border bg-app-surface/90 backdrop-blur-md flex items-center justify-between px-4 z-45">
+          <nav className="h-12 border-t border-app-border bg-app-surface/90 backdrop-blur-md flex items-center justify-between px-4 z-45 flex-shrink-0">
             <div className="w-8 shrink-0" />
             <div className="flex items-center gap-6 h-full justify-center">
               <button

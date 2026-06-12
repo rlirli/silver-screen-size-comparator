@@ -383,38 +383,65 @@ export function Comparator2DCanvas({
     setHoveredScreenId(null);
   };
 
-  // Touch handlers for mobile
-  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    if (e.touches.length === 1) {
-      setIsDragging(true);
-      const t = e.touches[0];
-      setDragStart({ x: t.clientX - pan.x, y: t.clientY - pan.y });
-    } else if (e.touches.length === 2) {
-      setIsDragging(false);
-      const t1 = e.touches[0];
-      const t2 = e.touches[1];
-      setTouchDist(Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY));
-    }
-  };
+  // Refs to keep track of current state inside native touch event listeners without re-binding
+  const panRef = useRef(pan);
+  panRef.current = pan;
+  const zoomRef = useRef(zoom);
+  zoomRef.current = zoom;
+  const isDraggingRef = useRef(isDragging);
+  isDraggingRef.current = isDragging;
+  const dragStartRef = useRef(dragStart);
+  dragStartRef.current = dragStart;
+  const touchDistRef = useRef(touchDist);
+  touchDistRef.current = touchDist;
 
-  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    if (e.touches.length === 1 && isDragging) {
-      const t = e.touches[0];
-      setPan({ x: t.clientX - dragStart.x, y: t.clientY - dragStart.y });
-    } else if (e.touches.length === 2) {
-      const t1 = e.touches[0];
-      const t2 = e.touches[1];
-      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-      if (touchDist === 0) return;
+  // Touch handlers for mobile (registered natively to allow non-passive preventDefault)
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-      const factor = dist / touchDist;
-      const nextZoom = Math.max(0.15, Math.min(12, zoom * factor));
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+      if (e.touches.length === 1) {
+        setIsDragging(true);
+        const t = e.touches[0];
+        setDragStart({ x: t.clientX - panRef.current.x, y: t.clientY - panRef.current.y });
+      } else if (e.touches.length === 2) {
+        setIsDragging(false);
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        setTouchDist(Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY));
+      }
+    };
 
-      const midX = (t1.clientX + t2.clientX) / 2;
-      const midY = (t1.clientY + t2.clientY) / 2;
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.cancelable) {
+        e.preventDefault();
+      }
 
-      const canvas = canvasRef.current;
-      if (canvas) {
+      const currentIsDragging = isDraggingRef.current;
+      const currentDragStart = dragStartRef.current;
+      const currentPan = panRef.current;
+      const currentTouchDist = touchDistRef.current;
+      const currentZoom = zoomRef.current;
+
+      if (e.touches.length === 1 && currentIsDragging) {
+        const t = e.touches[0];
+        setPan({ x: t.clientX - currentDragStart.x, y: t.clientY - currentDragStart.y });
+      } else if (e.touches.length === 2) {
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+        if (currentTouchDist === 0) return;
+
+        const factor = dist / currentTouchDist;
+        const nextZoom = Math.max(0.15, Math.min(12, currentZoom * factor));
+
+        const midX = (t1.clientX + t2.clientX) / 2;
+        const midY = (t1.clientY + t2.clientY) / 2;
+
         const rect = canvas.getBoundingClientRect();
         const mouseX = midX - rect.left;
         const mouseY = midY - rect.top;
@@ -428,24 +455,37 @@ export function Comparator2DCanvas({
         const xInVirtual = (mouseX - dx) / scale;
         const yInVirtual = (mouseY - dy) / scale;
 
-        const targetX = (xInVirtual - pan.x) / zoom;
-        const targetY = (yInVirtual - pan.y) / zoom;
+        const targetX = (xInVirtual - currentPan.x) / currentZoom;
+        const targetY = (yInVirtual - currentPan.y) / currentZoom;
 
         setZoom(nextZoom);
         setPan({
           x: xInVirtual - targetX * nextZoom,
           y: yInVirtual - targetY * nextZoom,
         });
+        setTouchDist(dist);
       }
-      setTouchDist(dist);
-    }
-  };
+    };
 
-  const handleTouchEnd = () => {
-    setIsDragging(false);
-    setTouchDist(0);
-    setHoveredScreenId(null);
-  };
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+      setIsDragging(false);
+      setTouchDist(0);
+      setHoveredScreenId(null);
+    };
+
+    canvas.addEventListener("touchstart", onTouchStart, { passive: false });
+    canvas.addEventListener("touchmove", onTouchMove, { passive: false });
+    canvas.addEventListener("touchend", onTouchEnd, { passive: false });
+
+    return () => {
+      canvas.removeEventListener("touchstart", onTouchStart);
+      canvas.removeEventListener("touchmove", onTouchMove);
+      canvas.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [layoutData]);
 
   // Add non-passive wheel zoom/swipe pan listener
   useEffect(() => {
@@ -897,9 +937,6 @@ export function Comparator2DCanvas({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUpOrLeave}
         onMouseLeave={handleMouseUpOrLeave}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
         className={`w-full h-full select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       />
 
