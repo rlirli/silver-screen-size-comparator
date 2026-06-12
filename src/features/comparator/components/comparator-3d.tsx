@@ -111,7 +111,7 @@ function DeviceOrientationControls({
       const target = controlsRef.current.target;
       const distance = camera.position.distanceTo(target);
       const lookDir = lookDirRef.current.set(0, 0, -1).applyQuaternion(camera.quaternion);
-      camera.position.copy(target).addScaledVector(lookDir, -distance);
+      target.copy(camera.position).addScaledVector(lookDir, distance);
     }
   });
 
