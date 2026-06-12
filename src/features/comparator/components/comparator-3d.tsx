@@ -62,8 +62,20 @@ function DeviceOrientationControls({
   const targetQuaternionRef = useRef(new THREE.Quaternion());
   const lookDirRef = useRef(new THREE.Vector3());
 
+  // Refs for tracking position/zoom state to prevent rotation translation/drift
+  const lastTargetRef = useRef(new THREE.Vector3());
+  const lastCameraPositionRef = useRef(new THREE.Vector3());
+  const lastDistanceRef = useRef(12);
+  const isFirstFrameRef = useRef(true);
+
+  const translationRef = useRef(new THREE.Vector3());
+  const newCameraPosRef = useRef(new THREE.Vector3());
+  const newTargetRef = useRef(new THREE.Vector3());
+
   useEffect(() => {
     if (!active) return;
+
+    isFirstFrameRef.current = true;
 
     const handleOrientation = (e: DeviceOrientationEvent) => {
       if (e.alpha !== null && e.beta !== null && e.gamma !== null) {
@@ -108,10 +120,43 @@ function DeviceOrientationControls({
     camera.quaternion.slerp(targetQuaternion, 0.1);
 
     if (controlsRef.current) {
-      const target = controlsRef.current.target;
-      const distance = camera.position.distanceTo(target);
+      const controls = controlsRef.current;
+
+      if (isFirstFrameRef.current) {
+        lastTargetRef.current.copy(controls.target);
+        lastCameraPositionRef.current.copy(camera.position);
+        lastDistanceRef.current = camera.position.distanceTo(controls.target);
+        isFirstFrameRef.current = false;
+      }
+
+      const currentTarget = controls.target;
+      const currentDistance = camera.position.distanceTo(currentTarget);
+
+      // T = currentTarget - lastTarget
+      const T = translationRef.current.copy(currentTarget).sub(lastTargetRef.current);
+
+      // D = currentDistance - lastDistance
+      const D = currentDistance - lastDistanceRef.current;
+
       const lookDir = lookDirRef.current.set(0, 0, -1).applyQuaternion(camera.quaternion);
-      target.copy(camera.position).addScaledVector(lookDir, distance);
+
+      // newCameraPos = lastCameraPosition + T - lookDir * D
+      const newCameraPos = newCameraPosRef.current
+        .copy(lastCameraPositionRef.current)
+        .add(T)
+        .addScaledVector(lookDir, -D);
+
+      // newTarget = newCameraPos + lookDir * currentDistance
+      const newTarget = newTargetRef.current
+        .copy(newCameraPos)
+        .addScaledVector(lookDir, currentDistance);
+
+      camera.position.copy(newCameraPos);
+      controls.target.copy(newTarget);
+
+      lastTargetRef.current.copy(newTarget);
+      lastCameraPositionRef.current.copy(newCameraPos);
+      lastDistanceRef.current = currentDistance;
     }
   });
 
@@ -716,11 +761,11 @@ export function Comparator3D({
         <OrbitControls
           ref={controlsRef}
           target={controlsTarget}
-          enableDamping
+          enableDamping={!gyroActive}
           dampingFactor={0.05}
           minDistance={4}
           maxDistance={80}
-          maxPolarAngle={Math.PI / 2 - 0.05} // prevent going underneath ground plane
+          maxPolarAngle={gyroActive ? Math.PI : Math.PI / 2 - 0.05} // prevent going underneath ground plane when in orbit mode
           enableRotate={!gyroActive}
         />
       </Canvas>
