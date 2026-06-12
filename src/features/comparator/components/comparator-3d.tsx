@@ -42,6 +42,9 @@ interface Render3DItem {
   isCustom: boolean;
 }
 
+const ZEE = new THREE.Vector3(0, 0, 1);
+const Q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)); // - PI/2 around the x-axis
+
 // Device orientation controller that updates camera rotation based on gyro data
 function DeviceOrientationControls({
   active,
@@ -52,6 +55,12 @@ function DeviceOrientationControls({
 }) {
   const { camera } = useThree();
   const [orientation, setOrientation] = useState({ alpha: 0, beta: 90, gamma: 0 });
+  const [screenOrientation, setScreenOrientation] = useState(0);
+
+  const eulerRef = useRef(new THREE.Euler());
+  const q0Ref = useRef(new THREE.Quaternion());
+  const targetQuaternionRef = useRef(new THREE.Quaternion());
+  const lookDirRef = useRef(new THREE.Vector3());
 
   useEffect(() => {
     if (!active) return;
@@ -62,27 +71,46 @@ function DeviceOrientationControls({
       }
     };
 
+    const handleScreenOrientation = () => {
+      setScreenOrientation(window.screen?.orientation?.angle ?? (window as any).orientation ?? 0);
+    };
+
     window.addEventListener("deviceorientation", handleOrientation);
-    return () => window.removeEventListener("deviceorientation", handleOrientation);
+    window.addEventListener("orientationchange", handleScreenOrientation);
+
+    // Initial check
+    handleScreenOrientation();
+
+    return () => {
+      window.removeEventListener("deviceorientation", handleOrientation);
+      window.removeEventListener("orientationchange", handleScreenOrientation);
+    };
   }, [active]);
 
   useFrame(() => {
     if (!active) return;
 
-    // Convert angles to radians
-    const pitch = (orientation.beta - 90) * (Math.PI / 180); // Rotate X (Pitch)
-    const yaw = orientation.alpha * (Math.PI / 180); // Rotate Y (Yaw)
-    const roll = -orientation.gamma * (Math.PI / 180); // Rotate Z (Roll)
+    const alpha = orientation.alpha * (Math.PI / 180); // Z
+    const beta = orientation.beta * (Math.PI / 180); // X'
+    const gamma = orientation.gamma * (Math.PI / 180); // Y''
+    const orient = screenOrientation * (Math.PI / 180); // Screen orientation angle
 
-    // Interpolate camera rotation for smooth look-around
-    const targetEuler = new THREE.Euler(pitch, yaw, roll, "YXZ");
-    const targetQuaternion = new THREE.Quaternion().setFromEuler(targetEuler);
+    const euler = eulerRef.current;
+    euler.set(beta, alpha, -gamma, "YXZ");
+
+    const targetQuaternion = targetQuaternionRef.current;
+    targetQuaternion.setFromEuler(euler); // Orient the device
+    targetQuaternion.multiply(Q1); // Camera looks out the back of the device, not the top
+
+    const q0 = q0Ref.current;
+    targetQuaternion.multiply(q0.setFromAxisAngle(ZEE, -orient)); // Adjust for screen orientation
+
     camera.quaternion.slerp(targetQuaternion, 0.1);
 
     if (controlsRef.current) {
       const target = controlsRef.current.target;
       const distance = camera.position.distanceTo(target);
-      const lookDir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+      const lookDir = lookDirRef.current.set(0, 0, -1).applyQuaternion(camera.quaternion);
       camera.position.copy(target).addScaledVector(lookDir, -distance);
     }
   });
