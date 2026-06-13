@@ -24404,6 +24404,48 @@
       "website": "http://www.cgv.com.cn/",
       "createdAt": "2026-06-10T16:25:13.081Z",
       "updatedAt": "2026-06-10T16:25:22.644Z"
+    },
+    {
+      "id": "venue_kinopolis_hafencity",
+      "name": "KINOPOLIS HafenCity",
+      "brand": "Kinopolis",
+      "location": {
+        "city": "Hamburg",
+        "country": "Germany",
+        "latitude": 53.53997,
+        "longitude": 9.99907
+      },
+      "website": "https://www.kinopolis.de/hh",
+      "createdAt": "2026-06-13T00:00:00.000Z",
+      "updatedAt": "2026-06-13T00:00:00.000Z"
+    },
+    {
+      "id": "venue_astor_hafencity",
+      "name": "ASTOR Film Lounge HafenCity",
+      "brand": "ASTOR Film Lounge",
+      "location": {
+        "city": "Hamburg",
+        "country": "Germany",
+        "latitude": 53.5433518926284,
+        "longitude": 9.995728183758294
+      },
+      "website": "https://hamburg.premiumkino.de/",
+      "createdAt": "2026-06-13T00:00:00.000Z",
+      "updatedAt": "2026-06-13T00:00:00.000Z"
+    },
+    {
+      "id": "venue_savoy_hamburg",
+      "name": "SAVOY Filmtheater",
+      "brand": "Premium Kino",
+      "location": {
+        "city": "Hamburg",
+        "country": "Germany",
+        "latitude": 53.554157556145256,
+        "longitude": 10.014097076500509
+      },
+      "website": "https://savoy.premiumkino.de/de/unser-haus",
+      "createdAt": "2026-06-13T00:00:00.000Z",
+      "updatedAt": "2026-06-13T00:00:00.000Z"
     }
   ],
   "screens": [
@@ -78286,6 +78328,95 @@
       },
       "createdAt": "2026-06-10T16:25:13.081Z",
       "updatedAt": "2026-06-10T16:25:13.081Z"
+    },
+    {
+      "id": "screen_kinopolis_hafencity_kino1",
+      "venueId": "venue_kinopolis_hafencity",
+      "name": "Kino 1",
+      "dimensions": {
+        "widthMeters": 22.37,
+        "heightMeters": 9.3,
+        "nativeAspectRatio": 2.41,
+        "isCurved": false,
+        "isDome": false
+      },
+      "tech": {
+        "standards": ["Dolby Atmos", "3D", "HFR", "Laser", "RealD Ultimate Screen", "D-Box"],
+        "projectionType": "3D HFR Laser (55000 Lumen)",
+        "is3D": true,
+        "audioEquipment": "Dolby Atmos",
+        "numberOfSeats": 443
+      },
+      "moviesType": "commercial",
+      "provenance": {
+        "dimensions": {
+          "sourceType": "operator",
+          "updatedAt": "2026-06-13T00:00:00.000Z",
+          "sourceUrl": "https://www.kinopolis.de/hh/saele",
+          "confidence": "high"
+        }
+      },
+      "createdAt": "2026-06-13T00:00:00.000Z",
+      "updatedAt": "2026-06-13T00:00:00.000Z"
+    },
+    {
+      "id": "screen_kinopolis_hafencity_dolbycinema",
+      "venueId": "venue_kinopolis_hafencity",
+      "name": "Dolby Cinema",
+      "dimensions": {
+        "widthMeters": 18.01,
+        "heightMeters": 7.53,
+        "nativeAspectRatio": 2.39,
+        "isCurved": false,
+        "isDome": false
+      },
+      "tech": {
+        "standards": ["Dolby Atmos", "Dolby Vision", "HFR", "Laser", "Dolby Cinema"],
+        "projectionType": "Dolby Vision Dual-Laser (55000 Lumen)",
+        "is3D": true,
+        "audioEquipment": "Dolby Atmos",
+        "numberOfSeats": 349
+      },
+      "moviesType": "commercial",
+      "provenance": {
+        "dimensions": {
+          "sourceType": "operator",
+          "updatedAt": "2026-06-13T00:00:00.000Z",
+          "sourceUrl": "https://www.kinopolis.de/hh/dolbycinema",
+          "confidence": "high"
+        }
+      },
+      "createdAt": "2026-06-13T00:00:00.000Z",
+      "updatedAt": "2026-06-13T00:00:00.000Z"
+    },
+    {
+      "id": "screen_savoy_hamburg_main",
+      "venueId": "venue_savoy_hamburg",
+      "name": "Hauptsaal",
+      "dimensions": {
+        "widthMeters": 16.35,
+        "heightMeters": 6.85,
+        "nativeAspectRatio": 2.39,
+        "isCurved": true,
+        "isDome": false
+      },
+      "tech": {
+        "standards": ["70mm", "Laser", "4K", "HFR", "3D"],
+        "projectionType": "NEC 4K Laser & Analog 70mm Projector",
+        "is3D": true,
+        "audioEquipment": "Dolby Surround 7.1",
+        "numberOfSeats": 327
+      },
+      "moviesType": "commercial",
+      "provenance": {
+        "dimensions": {
+          "sourceType": "user_contributed",
+          "updatedAt": "2026-06-13T00:00:00.000Z",
+          "confidence": "medium"
+        }
+      },
+      "createdAt": "2026-06-13T00:00:00.000Z",
+      "updatedAt": "2026-06-13T00:00:00.000Z"
     }
   ]
 }
